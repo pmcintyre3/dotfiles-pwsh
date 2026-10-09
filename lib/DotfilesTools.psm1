@@ -19,4 +19,5 @@ Export-ModuleMember -Function @(
     'Invoke-DotLinks'
     'Reset-DotLinkPrompt'
     'Test-CanPrompt'
+    'Merge-JsonSettings'
 )
