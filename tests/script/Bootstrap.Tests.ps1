@@ -1,5 +1,7 @@
 BeforeAll {
     . (Join-Path $PSScriptRoot '..\TestHelpers.ps1')
+    # Bootstrap runs git/local.ps1, which prompts for a missing identity on an interactive console.
+    Mock Test-CanPrompt { $false }
 }
 
 Describe 'script/bootstrap.ps1' {
@@ -61,6 +63,19 @@ Describe 'script/bootstrap.ps1' {
         $args2.TokenMap = @{ '{PROFILE}' = $otherProfile; '~' = (Join-Path $TestDrive 'home') }
         & (Join-Path $repo 'script\bootstrap.ps1') @args2 *> $null
         Get-Content -Path (Join-Path $dir 'Microsoft.PowerShell_profile.legacy.ps1') | Should -Be '# hand-made legacy'
+    }
+
+    It 'turns ~/.gitconfig into an include of the repo config, seeded into gitconfig.local' {
+        $gitconfigStub = Join-Path $TestDrive 'home\.gitconfig'
+        Get-Content -Path $gitconfigStub -Raw | Should -Match 'path = ~/.dotfiles/git/gitconfig'
+        Join-Path $repo 'git\gitconfig.local' | Should -Exist
+    }
+
+    It 'does not silently replace a ~/.gitconfig that tools have written to' {
+        $gitconfigStub = Join-Path $TestDrive 'home\.gitconfig'
+        Add-Content -Path $gitconfigStub -Value "[credential]`n    helper = manager"
+        & (Join-Path $repo 'script\bootstrap.ps1') @bootstrapArgs *> $null
+        Get-Content -Path $gitconfigStub -Raw | Should -Match 'helper = manager'
     }
 }
 

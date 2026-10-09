@@ -1,0 +1,17 @@
+# Shared git settings for every machine (dotfiles-pwsh). ~/.gitconfig only includes this file.
+# This machine's identity and commit signing live in gitconfig.local (gitignored, created by git/local.ps1).
+# Prefer `git config --file ~/.dotfiles/git/gitconfig.local ...` over `git config --global ...`:
+# --global writes into the ~/.gitconfig stub, and dot will ask before replacing it.
+[core]
+    sshCommand = C:/Windows/System32/OpenSSH/ssh.exe
+    excludesfile = ~/.dotfiles/git/gitignore_global
+[init]
+    defaultBranch = main
+[pull]
+    ff = only
+[fetch]
+    prune = true
+
+# Last, so this machine's values win.
+[include]
+    path = gitconfig.local
