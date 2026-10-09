@@ -57,6 +57,16 @@ Describe 'Read-DotfilesConfig' {
         Set-Content -Path (Join-Path $root 'dotfiles.local.psd1') -Value '@{ ExcludeTopics = '
         { Read-DotfilesConfig -Root $root } | Should -Throw '*dotfiles.local.psd1*'
     }
+    It 'defaults PackageGroups to core and dev' {
+        (Read-DotfilesConfig -Root (New-TestDir)).PackageGroups | Should -Be @('core', 'dev')
+    }
+    It 'reads PackageGroups from dotfiles.local.psd1 as an array' {
+        $root = New-TestDir
+        Set-Content -Path (Join-Path $root 'dotfiles.local.psd1') -Value "@{ PackageGroups = 'personal' }"
+        $groups = (Read-DotfilesConfig -Root $root).PackageGroups
+        $groups | Should -Be 'personal'
+        , $groups | Should -BeOfType [array]
+    }
     It 'rejects an unknown Elevation value' {
         $root = New-TestDir
         Set-Content -Path (Join-Path $root 'dotfiles.local.psd1') -Value "@{ Elevation = 'Sometimes' }"

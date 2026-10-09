@@ -54,6 +54,7 @@ function Read-DotfilesConfig {
         ExcludeTopics = @()
         Elevation     = 'Never'
         PSRepository  = 'PSGallery'
+        PackageGroups = @('core', 'dev')
     }
 
     $localPath = Join-Path $Root 'dotfiles.local.psd1'
@@ -70,6 +71,7 @@ function Read-DotfilesConfig {
         throw "Invalid Elevation '$($config.Elevation)' in '$localPath'. Use Never, Prompt, or Auto."
     }
     $config.ExcludeTopics = @($config.ExcludeTopics)
+    $config.PackageGroups = @($config.PackageGroups)
     return $config
 }
 
