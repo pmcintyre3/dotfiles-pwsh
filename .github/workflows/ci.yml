@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester and PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-PSResource -Name Pester -Version '[5.5.0,6.0.0)' -Scope CurrentUser -TrustRepository
+          Install-PSResource -Name PSScriptAnalyzer -Scope CurrentUser -TrustRepository
+
+      - name: Lint
+        shell: pwsh
+        run: ./script/test.ps1 -Lint
+
+      - name: Test
+        shell: pwsh
+        run: ./script/test.ps1 -Test

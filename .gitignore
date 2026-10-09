@@ -1,0 +1,11 @@
+# Machine-local files generated from *.template by script/bootstrap.ps1
+dotfiles.local.psd1
+*.local.ps1
+*.local.psd1
+git/gitconfig.local
+
+# Backups written by New-DotLink when replacing an existing file
+*.backup-*
+
+# Test output
+testResults.xml
