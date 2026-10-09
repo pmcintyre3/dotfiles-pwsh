@@ -1,0 +1,11 @@
+# Machine-specific values for this computer. Not committed (see .gitignore).
+# Created from profile.local.ps1.template by script/bootstrap.ps1.
+# Loaded FIRST by the profile; powershell/env.ps1 then fills in anything left unset.
+# Never put secrets here. Fetch them with `op read` inside the function that needs them.
+
+# $env:ProjectHome = 'C:\Projects'
+
+$global:ProjectPaths ??= @{}
+# $global:ProjectPaths.Tools       = 'C:\Tools'
+# $global:ProjectPaths.Workspace   = "$env:ProjectHome\Personal"
+# $global:ProjectPaths.Credentials = "$env:ProjectHome\Credentials"
