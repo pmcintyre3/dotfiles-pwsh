@@ -7,13 +7,15 @@
     dot             # update everything (installs missing packages and extensions)
     dot -Upgrade    # same, and upgrade managed packages
     dot -Elevated   # machine-wide steps skipped for lack of admin (one UAC prompt)
+    dot -ResetExplorerViews   # forget remembered folder views (backed up first) so defaults apply
     dot -e          # open the dotfiles in VS Code
 #>
 [CmdletBinding()]
 param(
     [Alias('e')] [switch] $Edit,
     [switch] $Upgrade,
-    [switch] $Elevated
+    [switch] $Elevated,
+    [switch] $ResetExplorerViews
 )
 
 $root = Split-Path -Path $PSScriptRoot -Parent
@@ -24,6 +26,16 @@ if ($Edit) {
 }
 
 Import-Module (Join-Path $root 'lib\DotfilesTools.psm1') -Force
+
+if ($ResetExplorerViews) {
+    try {
+        & (Join-Path $root 'windows\reset-explorer-views.ps1')
+        exit 0
+    } catch {
+        Write-Status -Level Fail -Message $_.Exception.Message
+        exit 1
+    }
+}
 
 if ($Elevated) {
     $log = Join-Path $root '.state\elevated.log'

@@ -50,6 +50,16 @@ Describe 'bin/dot.ps1' {
         $marker | Should -Not -Exist
     }
 
+    It 'dot -ResetExplorerViews runs the reset and nothing else' {
+        $resetMarker = Join-Path $repo 'reset-ran.txt'
+        Set-Content -Path (Join-Path $repo 'windows\reset-explorer-views.ps1') -Value "Set-Content -Path '$resetMarker' -Value ran"
+        Mock git { throw 'git should not run' }
+        & $dot -ResetExplorerViews *> $null
+        $LASTEXITCODE | Should -Be 0
+        $resetMarker | Should -Exist
+        $marker | Should -Not -Exist
+    }
+
     It '-Elevated reports a declined UAC prompt and exits 1' {
         Mock Start-Process { throw 'The operation was canceled by the user.' }
         & $dot -Elevated *> $null
