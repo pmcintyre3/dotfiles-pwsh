@@ -18,6 +18,8 @@ Windows / PowerShell 7 dotfiles, organized like haacked/dotfiles (topic folders)
   hashes in `.state/` so edits made outside the repo are never overwritten silently. Copied app files
   need a `-text` line in `.gitattributes` so line-ending conversion doesn't look like an edit.
 - Git config values use forward slashes or `~/` (backslashes are escapes in git config).
+- `links.psd1` entries may set `Optional = $true` (silent until the source exists in the repo).
+- App-written JSON settings are merged with `Merge-JsonSettings` (managed keys win, others kept), not linked or copied.
 - Topic installers may declare `-Upgrade` (gets `dot -Upgrade`) and `-MachineOnly` (run by
   `script/elevated.ps1` for `dot -Elevated`). A `-MachineOnly` run may be a different user account, so it
   must never touch HKCU, `$HOME`, or per-user installs.
