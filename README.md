@@ -39,6 +39,7 @@ git -C $HOME\.dotfiles remote set-url origin git@github.com:pmcintyre3/dotfiles-
   | File | Purpose |
   |------|---------|
   | `install.ps1` | Run by `script\install.ps1` (bootstrap and `dot`) |
+  | `local.ps1` | Creates the topic's machine-local files; run by bootstrap before linking |
   | `links.psd1` | Files to link into place (include stub, junction, symlink, or copy) |
   | `env.ps1` | Environment defaults (use `??=` so local values win) |
   | `path.ps1` | PATH additions (`Add-PathEntry`) |
@@ -51,6 +52,12 @@ git -C $HOME\.dotfiles remote set-url origin git@github.com:pmcintyre3/dotfiles-
 - **Machine-local settings** (gitignored, created from `*.template` by bootstrap):
   - `dotfiles.local.psd1`: `ExcludeTopics`, `Elevation`, `PSRepository`
   - `powershell\profile.local.ps1`: `$env:ProjectHome`, `$ProjectPaths` overrides
+- **Copied files and drift.** Files that can't be linked without admin (Windows Terminal settings) are
+  copied. Bootstrap remembers what it copied (`.state\`, gitignored): if only the repo changed it
+  refreshes the copy; if the live file was edited (e.g. in Terminal's Settings UI) it asks, offering
+  **[p]ull into repo** so you can commit the change.
+- **`local.ps1` hooks.** A topic with `local.ps1` creates its own machine-local files before linking.
+  `git/local.ps1` seeds `gitconfig.local` (name, email, 1Password signing) from your existing `~/.gitconfig`.
 - **Secrets** never live in this repo. Fetch them with `op read` inside the function that needs them.
 - **No admin required.** Bootstrap probes the machine (admin, symlink rights, execution policy,
   language mode) and picks methods that work. On a locked-down machine it reports what it skipped.
@@ -69,8 +76,9 @@ dot -e     # open ~\.dotfiles in VS Code
 | Topic | What it does |
 |-------|--------------|
 | `powershell` | Profile loader, navigation and menu helpers, gallery modules (`modules.psd1`) |
-| `git` | Git helper functions and aliases |
-| `tools` | PATH entries for OpenSSL, Python, MongoDB, and the `C:\Tools` folder |
+| `git` | `~/.gitconfig` → shared `gitconfig` + per-machine `gitconfig.local`; global gitignore; git helper functions and aliases |
+| `terminal` | Windows Terminal `settings.json` (copied, with drift check; skipped if Terminal isn't installed) |
+| `tools` | PATH entries for OpenSSL, Python, MongoDB, `C:\Tools`; `openssl.cnf` when OpenSSL is installed |
 
 ## Commands
 
@@ -90,6 +98,12 @@ dot -e     # open ~\.dotfiles in VS Code
 | `gmg` / `gmerge` | `Merge-UpdatedGitBranch` / `Merge-UpdatedGitBranchFromOrigin` | git |
 | `grb` / `grebase` | `Invoke-GitRebase` / `Invoke-GitRebaseFromOrigin` | git |
 | `grepo` | `Get-GitRepositoryName` | git |
+
+### Git config tips
+
+- Change this machine's settings with `git config --file ~/.dotfiles/git/gitconfig.local <key> <value>`.
+- Shared settings go in `git/gitconfig` (committed).
+- `git config --global` writes into the `~/.gitconfig` stub; `dot` will then ask before replacing it.
 
 ## Development
 

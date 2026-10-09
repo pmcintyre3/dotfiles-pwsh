@@ -10,8 +10,14 @@ Windows / PowerShell 7 dotfiles, organized like haacked/dotfiles (topic folders)
 ## Conventions
 
 - A topic is any top-level folder except `script`, `lib`, `bin`, `tests`, and dot-folders. Topics opt in
-  only through well-known files: `install.ps1`, `links.psd1`, `env.ps1`, `path.ps1`, `functions/*.ps1`,
-  `aliases.ps1`, `completion.ps1`.
+  only through well-known files: `install.ps1`, `local.ps1`, `links.psd1`, `env.ps1`, `path.ps1`,
+  `functions/*.ps1`, `aliases.ps1`, `completion.ps1`.
+- `local.ps1` (optional, per topic) creates that topic's machine-local files and runs before linking,
+  with `-TokenMap`; topics without it get generic `*.template` copying. It must never overwrite.
+- Link entries may set `RequireParent = $true` (skip when the app isn't installed). Copy links record
+  hashes in `.state/` so edits made outside the repo are never overwritten silently. Copied app files
+  need a `-text` line in `.gitattributes` so line-ending conversion doesn't look like an edit.
+- Git config values use forward slashes or `~/` (backslashes are escapes in git config).
 - Profile load order: `powershell/profile.local.ps1` → `*/env.ps1` → `*/path.ps1` → `*/functions/*.ps1`
   → `*/aliases.ps1` → `*/completion.ps1`. Within a stage, topics load alphabetically.
 - `env.ps1` only sets defaults with `??=`; machine values belong in the gitignored `profile.local.ps1`.
