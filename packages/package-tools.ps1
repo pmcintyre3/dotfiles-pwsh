@@ -3,6 +3,7 @@
 
 $script:WingetNoApplicableInstaller = -1978335216   # APPINSTALLER_CLI_ERROR_NO_APPLICABLE_INSTALLER (e.g. no per-user installer)
 $script:WingetUpdateNotApplicable = -1978335189     # APPINSTALLER_CLI_ERROR_UPDATE_NOT_APPLICABLE (already up to date)
+$script:WingetNoInstalledPackage = -1978335212      # APPINSTALLER_CLI_ERROR_NO_APPLICATIONS_FOUND (not installed in that scope)
 
 function Test-PackageManager {
     param([Parameter(Mandatory)] [string] $Name)
@@ -11,13 +12,15 @@ function Test-PackageManager {
 
 function Get-InstalledWingetId {
     # Package IDs winget can see as installed (any scope), via `winget export`.
-    if (-not (Test-PackageManager -Name 'winget')) { return @() }
+    # Ok = $false means winget exists but couldn't list packages (e.g. blocked by policy): don't treat that as "nothing installed".
+    if (-not (Test-PackageManager -Name 'winget')) { return [pscustomobject]@{ Ok = $true; Ids = @(); Reason = $null } }
     $export = Join-Path ([IO.Path]::GetTempPath()) "dotfiles-winget-$([guid]::NewGuid().ToString('N')).json"
     try {
-        winget export --output $export --accept-source-agreements --disable-interactivity 2>&1 | Out-Null
-        if (-not (Test-Path -Path $export)) { return @() }
+        $code = Invoke-Winget -Arguments @('export', '--output', $export, '--accept-source-agreements', '--disable-interactivity')
+        if ($code -ne 0) { return [pscustomobject]@{ Ok = $false; Ids = @(); Reason = "winget export exited $code" } }
+        if (-not (Test-Path -Path $export)) { return [pscustomobject]@{ Ok = $false; Ids = @(); Reason = 'winget export wrote no file' } }
         $json = Get-Content -Path $export -Raw | ConvertFrom-Json
-        return @($json.Sources.Packages.PackageIdentifier)
+        return [pscustomobject]@{ Ok = $true; Ids = @($json.Sources.Packages.PackageIdentifier); Reason = $null }
     } finally {
         Remove-Item -Path $export -ErrorAction Ignore
     }
@@ -63,16 +66,21 @@ function Get-PackagePlan {
     param(
         [Parameter(Mandatory)] [hashtable[]] $Packages,
         [string[]] $Groups = @(),
-        [string[]] $InstalledWinget = @()
+        [string[]] $InstalledWinget = @(),
+        # Elevated runs may be another account, whose view of "installed" is wrong for this user.
+        [switch] $SkipDetection
     )
     foreach ($package in $Packages) {
         if ($package.Group -notin $Groups) { continue }
-        $installed = ($package.Winget -and $package.Winget -in $InstalledWinget) -or
-            ($package.Scoop -and (Test-ScoopPackageInstalled -Name $package.Scoop))
+        $via = $null
+        if (-not $SkipDetection) {
+            if ($package.Winget -and $package.Winget -in $InstalledWinget) { $via = 'winget' }
+            elseif ($package.Scoop -and (Test-ScoopPackageInstalled -Name $package.Scoop)) { $via = 'scoop' }
+        }
         [pscustomobject]@{
             Name = $package.Name; Group = $package.Group
             Winget = $package.Winget; Scoop = $package.Scoop; Choco = $package.Choco
-            Installed = [bool] $installed
+            Installed = [bool] $via; InstalledVia = $via
         }
     }
 }
@@ -100,7 +108,12 @@ function Install-ManagedPackage {
             }
         }
         if ($Package.Scoop) {
-            if (-not (Test-PackageManager -Name 'scoop')) { Install-Scoop }
+            if (-not (Test-PackageManager -Name 'scoop')) {
+                Install-Scoop
+                if (-not (Test-PackageManager -Name 'scoop')) {
+                    return New-PackageResult $Package.Name 'Failed' $null "Scoop isn't installed and couldn't be installed (see the output above)"
+                }
+            }
             Invoke-Scoop -Arguments @('install', $Package.Scoop)
             if (Test-ScoopPackageInstalled -Name $Package.Scoop) { return New-PackageResult $Package.Name 'Installed' 'scoop' $null }
             return New-PackageResult $Package.Name 'Failed' $null "scoop install $($Package.Scoop) didn't install it"
@@ -126,10 +139,20 @@ function Install-ManagedPackage {
 }
 
 function Update-ManagedPackage {
-    param([Parameter(Mandatory)] [pscustomobject] $Package)
-    $code = Invoke-Winget -Arguments @('upgrade', '--id', $Package.Winget, '--exact', '--silent',
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Package,
+        # 'user' or 'machine' limits winget to installs of that scope (so no UAC prompts when machine changes aren't allowed).
+        [string] $Scope
+    )
+    if ($Package.InstalledVia -eq 'scoop') {
+        Invoke-Scoop -Arguments @('update', $Package.Scoop)
+        return New-PackageResult $Package.Name 'Upgraded' 'scoop' $null
+    }
+    $arguments = @('upgrade', '--id', $Package.Winget, '--exact', '--silent',
         '--accept-package-agreements', '--accept-source-agreements', '--disable-interactivity')
+    if ($Scope) { $arguments += '--scope', $Scope }
+    $code = Invoke-Winget -Arguments $arguments
     if ($code -eq 0) { return New-PackageResult $Package.Name 'Upgraded' 'winget' $null }
-    if ($code -eq $script:WingetUpdateNotApplicable) { return New-PackageResult $Package.Name 'UpToDate' $null $null }
+    if ($code -in $script:WingetUpdateNotApplicable, $script:WingetNoInstalledPackage) { return New-PackageResult $Package.Name 'UpToDate' $null $null }
     return New-PackageResult $Package.Name 'Failed' $null "winget upgrade exited $code"
 }

@@ -38,6 +38,15 @@ Describe 'script/elevated.ps1' {
         Get-Content -Path (Join-Path $root 'ran.txt') | Should -Be 'machine:True'
     }
 
+    It 'passes -Upgrade to machine installers that declare it' {
+        Mock Test-IsAdmin { $true }
+        $root = New-ElevatedRoot -Elevation 'Prompt'
+        $marker = Join-Path $root 'ran.txt'
+        Set-Content -Path (Join-Path $root 'machine\install.ps1') -Value "param([switch] `$MachineOnly, [switch] `$Upgrade) Add-Content -Path '$marker' -Value ""both `$MachineOnly `$Upgrade"""
+        & $elevated -Root $root -Upgrade 6> $null
+        Get-Content -Path $marker | Should -Be 'both True True'
+    }
+
     It 'exits 1 when a machine installer fails' {
         Mock Test-IsAdmin { $true }
         $root = New-ElevatedRoot -Elevation 'Auto'

@@ -45,7 +45,7 @@ if ($Elevated) {
     Write-Status -Level Info -Message 'Running machine-wide steps elevated (approve the UAC prompt)...'
     try {
         $process = Start-Process -FilePath 'pwsh' -Verb RunAs -Wait -PassThru `
-            -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$elevatedScript`" -LogPath `"$log`""
+            -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$elevatedScript`" -LogPath `"$log`"$(if ($Upgrade) { ' -Upgrade' })"
     } catch {
         Write-Status -Level Fail -Message "Elevated run didn't start: $($_.Exception.Message)"
         exit 1

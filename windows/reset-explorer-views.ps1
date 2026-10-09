@@ -4,7 +4,8 @@
     dot -ResetExplorerViews: forget remembered Explorer folder views so every folder picks up the defaults
     (e.g. Downloads not grouped by date). Backs up to .state\ first and deletes nothing if that fails;
     then re-applies the windows defaults (they live under Bags) and restarts Explorer.
-    Also forgets per-folder view/sort tweaks. Technique from WinSetView (github.com/LesFerch/WinSetView).
+    Also forgets per-folder view/sort tweaks and any "Apply to Folders" templates (all in the .reg backup).
+    WinSetView (github.com/LesFerch/WinSetView) resets views the same way.
 #>
 [CmdletBinding()]
 param(

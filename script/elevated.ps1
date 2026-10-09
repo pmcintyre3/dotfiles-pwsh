@@ -8,7 +8,8 @@
 [CmdletBinding()]
 param(
     [string] $Root = (Split-Path -Path $PSScriptRoot -Parent),
-    [string] $LogPath
+    [string] $LogPath,
+    [switch] $Upgrade
 )
 
 Import-Module (Join-Path $PSScriptRoot '..\lib\DotfilesTools.psm1') -Force
@@ -25,11 +26,14 @@ try {
         foreach ($topic in Get-DotfilesTopic -Root $Root -ExcludeTopics $config.ExcludeTopics) {
             $installer = Join-Path $topic.FullName 'install.ps1'
             if (-not (Test-Path -Path $installer)) { continue }
-            if (-not (Get-Command -Name $installer).Parameters.ContainsKey('MachineOnly')) { continue }
+            $parameters = (Get-Command -Name $installer).Parameters
+            if (-not $parameters.ContainsKey('MachineOnly')) { continue }
+            $installerParams = @{ MachineOnly = $true }
+            if ($Upgrade -and $parameters.ContainsKey('Upgrade')) { $installerParams.Upgrade = $true }
 
-            Write-Status -Level Info -Message "Running $($topic.Name)\install.ps1 -MachineOnly"
+            Write-Status -Level Info -Message "Running $($topic.Name)\install.ps1 -MachineOnly$(if ($installerParams.Upgrade) { ' -Upgrade' })"
             try {
-                & $installer -MachineOnly | Out-Host
+                & $installer @installerParams | Out-Host
             } catch {
                 $exitCode = 1
                 Write-Status -Level Fail -Message "$($topic.Name)\install.ps1 -MachineOnly: $($_.Exception.Message)"

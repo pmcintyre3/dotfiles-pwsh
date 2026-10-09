@@ -3,7 +3,46 @@ BeforeAll {
     . (Join-Path $PSScriptRoot '..\..\packages\package-tools.ps1')
     $noApplicableInstaller = -1978335216
     $updateNotApplicable = -1978335189
-    function New-Item2 { param([hashtable] $Fields) [pscustomobject]@{ Name = $Fields.Name; Group = 'core'; Winget = $Fields.Winget; Scoop = $Fields.Scoop; Choco = $Fields.Choco; Installed = $false } }
+    $noInstalledPackage = -1978335212
+    function New-Item2 {
+        param([hashtable] $Fields)
+        [pscustomobject]@{ Name = $Fields.Name; Group = 'core'; Winget = $Fields.Winget; Scoop = $Fields.Scoop; Choco = $Fields.Choco
+            Installed = [bool] $Fields.InstalledVia; InstalledVia = $Fields.InstalledVia }
+    }
+}
+
+Describe 'Get-InstalledWingetId' {
+    BeforeEach { Mock Test-PackageManager { $true } }
+
+    It 'returns the IDs from winget export' {
+        Mock Invoke-Winget {
+            $out = $Arguments[[array]::IndexOf($Arguments, '--output') + 1]
+            Set-Content -Path $out -Value '{"Sources":[{"Packages":[{"PackageIdentifier":"Git.Git"},{"PackageIdentifier":"GitHub.cli"}]}]}'
+            0
+        }
+        $r = Get-InstalledWingetId
+        $r.Ok | Should -BeTrue
+        $r.Ids | Should -Be @('Git.Git', 'GitHub.cli')
+    }
+
+    It 'reports failure when winget export fails' {
+        Mock Invoke-Winget { 1 }
+        $r = Get-InstalledWingetId
+        $r.Ok | Should -BeFalse
+        $r.Reason | Should -Match '1'
+    }
+
+    It 'reports failure when winget export writes no file' {
+        Mock Invoke-Winget { 0 }
+        (Get-InstalledWingetId).Ok | Should -BeFalse
+    }
+
+    It 'treats a machine without winget as nothing installed through winget' {
+        Mock Test-PackageManager { $false }
+        $r = Get-InstalledWingetId
+        $r.Ok | Should -BeTrue
+        $r.Ids | Should -BeNullOrEmpty
+    }
 }
 
 Describe 'Get-PackagePlan' {
@@ -17,7 +56,7 @@ Describe 'Get-PackagePlan' {
         (Get-PackagePlan -Packages $packages -Groups 'core', 'dev' -InstalledWinget @()).Name | Should -Be @('A', 'C')
     }
 
-    It 'marks winget- and Scoop-installed packages as installed' {
+    It 'marks winget- and Scoop-installed packages as installed, recording how' {
         Mock Test-ScoopPackageInstalled { $Name -eq 'nvm' }
         $packages = @(
             @{ Name = 'Git'; Group = 'core'; Winget = 'Git.Git' }
@@ -26,18 +65,27 @@ Describe 'Get-PackagePlan' {
         )
         $plan = Get-PackagePlan -Packages $packages -Groups 'core' -InstalledWinget @('git.git')
         ($plan | Where-Object Installed).Name | Should -Be @('Git', 'NVM')
+        $plan.InstalledVia | Should -Be @('winget', 'scoop', $null)
+    }
+
+    It 'does no detection with -SkipDetection (elevated runs may be another account)' {
+        Mock Test-ScoopPackageInstalled { throw 'should not detect' }
+        $plan = Get-PackagePlan -Packages @(@{ Name = 'Git'; Group = 'core'; Winget = 'Git.Git'; Scoop = 'git' }) -Groups 'core' -SkipDetection
+        $plan.Installed | Should -BeFalse
     }
 }
 
 Describe 'Install-ManagedPackage' {
     BeforeEach {
-        Mock Test-PackageManager { $Name -eq 'winget' }
+        $global:ScoopInstalled = $false
+        Mock Test-PackageManager { $Name -eq 'winget' -or ($Name -eq 'scoop' -and $global:ScoopInstalled) }
         Mock Invoke-Winget { 0 }
         Mock Invoke-Scoop { }
-        Mock Install-Scoop { }
+        Mock Install-Scoop { $global:ScoopInstalled = $true }
         Mock Invoke-Choco { 0 }
         Mock Test-ScoopPackageInstalled { $true }
     }
+    AfterAll { Remove-Variable -Name ScoopInstalled -Scope Global -ErrorAction Ignore }
 
     It 'installs per-user with winget first' {
         $r = Install-ManagedPackage -Package (New-Item2 @{ Name = 'Git'; Winget = 'Git.Git' }) -MachineAllowed $false
@@ -54,13 +102,21 @@ Describe 'Install-ManagedPackage' {
     }
 
     It 'falls back to Scoop (installing Scoop first) when there is no per-user winget installer' {
-        Mock Test-PackageManager { $Name -eq 'winget' }   # scoop not present yet
         Mock Invoke-Winget { $noApplicableInstaller }
         $r = Install-ManagedPackage -Package (New-Item2 @{ Name = 'AWS'; Winget = 'Amazon.AWSCLI'; Scoop = 'aws' }) -MachineAllowed $false
         $r.Action | Should -Be 'Installed'
         $r.Via | Should -Be 'scoop'
         Should -Invoke Install-Scoop -Times 1 -Exactly
         Should -Invoke Invoke-Scoop -Times 1 -Exactly -ParameterFilter { $Arguments -contains 'aws' }
+    }
+
+    It 'reports Failed, without calling scoop, when Scoop could not be installed' {
+        Mock Invoke-Winget { $noApplicableInstaller }
+        Mock Install-Scoop { }
+        $r = Install-ManagedPackage -Package (New-Item2 @{ Name = 'AWS'; Winget = 'Amazon.AWSCLI'; Scoop = 'aws' }) -MachineAllowed $false
+        $r.Action | Should -Be 'Failed'
+        $r.Reason | Should -Match 'Scoop'
+        Should -Invoke Invoke-Scoop -Times 0 -Exactly
     }
 
     It 'installs machine-wide with winget when allowed' {
@@ -99,13 +155,35 @@ Describe 'Install-ManagedPackage' {
 }
 
 Describe 'Update-ManagedPackage' {
+    BeforeEach { Mock Invoke-Scoop { } }
+
     It 'maps winget upgrade results' {
         Mock Invoke-Winget { 0 }
-        (Update-ManagedPackage -Package (New-Item2 @{ Name = 'Git'; Winget = 'Git.Git' })).Action | Should -Be 'Upgraded'
+        (Update-ManagedPackage -Package (New-Item2 @{ Name = 'Git'; Winget = 'Git.Git'; InstalledVia = 'winget' })).Action | Should -Be 'Upgraded'
         Mock Invoke-Winget { $updateNotApplicable }
-        (Update-ManagedPackage -Package (New-Item2 @{ Name = 'Git'; Winget = 'Git.Git' })).Action | Should -Be 'UpToDate'
+        (Update-ManagedPackage -Package (New-Item2 @{ Name = 'Git'; Winget = 'Git.Git'; InstalledVia = 'winget' })).Action | Should -Be 'UpToDate'
         Mock Invoke-Winget { 5 }
-        (Update-ManagedPackage -Package (New-Item2 @{ Name = 'Git'; Winget = 'Git.Git' })).Action | Should -Be 'Failed'
+        (Update-ManagedPackage -Package (New-Item2 @{ Name = 'Git'; Winget = 'Git.Git'; InstalledVia = 'winget' })).Action | Should -Be 'Failed'
+    }
+
+    It 'treats "no installed package found" in the requested scope as up to date' {
+        Mock Invoke-Winget { $noInstalledPackage }
+        (Update-ManagedPackage -Package (New-Item2 @{ Name = 'VS'; Winget = 'Microsoft.VisualStudio.Community'; InstalledVia = 'winget' }) -Scope 'user').Action |
+            Should -Be 'UpToDate'
+    }
+
+    It 'passes --scope when given' {
+        Mock Invoke-Winget { 0 }
+        Update-ManagedPackage -Package (New-Item2 @{ Name = 'Git'; Winget = 'Git.Git'; InstalledVia = 'winget' }) -Scope 'user' | Out-Null
+        Should -Invoke Invoke-Winget -Times 1 -Exactly -ParameterFilter { ($Arguments -join ' ') -match '--scope user' }
+    }
+
+    It 'upgrades Scoop-installed packages with scoop update, not winget' {
+        Mock Invoke-Winget { throw 'winget should not run' }
+        $r = Update-ManagedPackage -Package (New-Item2 @{ Name = 'AWS'; Winget = 'Amazon.AWSCLI'; Scoop = 'aws'; InstalledVia = 'scoop' })
+        $r.Action | Should -Be 'Upgraded'
+        $r.Via | Should -Be 'scoop'
+        Should -Invoke Invoke-Scoop -Times 1 -Exactly -ParameterFilter { $Arguments[0] -eq 'update' -and $Arguments -contains 'aws' }
     }
 }
 

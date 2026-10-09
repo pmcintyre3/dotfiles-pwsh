@@ -60,6 +60,12 @@ Describe 'bin/dot.ps1' {
         $marker | Should -Not -Exist
     }
 
+    It '-Elevated -Upgrade forwards -Upgrade to the elevated run' {
+        Mock Start-Process { [pscustomobject]@{ ExitCode = 0 } }
+        & $dot -Elevated -Upgrade *> $null
+        Should -Invoke Start-Process -Times 1 -Exactly -ParameterFilter { "$ArgumentList" -like '*elevated.ps1*-Upgrade*' }
+    }
+
     It '-Elevated reports a declined UAC prompt and exits 1' {
         Mock Start-Process { throw 'The operation was canceled by the user.' }
         & $dot -Elevated *> $null
