@@ -1,6 +1,8 @@
 BeforeAll {
     . (Join-Path $PSScriptRoot '..\TestHelpers.ps1')
     # Bootstrap runs git/local.ps1, which prompts for a missing identity on an interactive console.
+    # Import first: Mock needs the command to exist, and this file may run before any other imports it.
+    Import-Module (Join-Path $PSScriptRoot '..\..\lib\DotfilesTools.psm1') -Force
     Mock Test-CanPrompt { $false }
 }
 
@@ -14,7 +16,7 @@ Describe 'script/bootstrap.ps1' {
             SkipInstall    = $true
             SkipNetwork    = $true
             ConflictAction = 'Skip'
-            TokenMap       = @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'home') }
+            TokenMap       = @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'home'); '{LOCALAPPDATA}' = (Join-Path $TestDrive 'localappdata') }
         }
         & (Join-Path $repo 'script\bootstrap.ps1') @bootstrapArgs *> $null
         $firstExit = $LASTEXITCODE
@@ -60,9 +62,13 @@ Describe 'script/bootstrap.ps1' {
         Set-Content -Path $otherProfile -Value '# newer profile'
         Set-Content -Path (Join-Path $dir 'Microsoft.PowerShell_profile.legacy.ps1') -Value '# hand-made legacy'
         $args2 = $bootstrapArgs.Clone()
-        $args2.TokenMap = @{ '{PROFILE}' = $otherProfile; '~' = (Join-Path $TestDrive 'home') }
+        $args2.TokenMap = @{ '{PROFILE}' = $otherProfile; '~' = (Join-Path $TestDrive 'home'); '{LOCALAPPDATA}' = (Join-Path $TestDrive 'localappdata') }
         & (Join-Path $repo 'script\bootstrap.ps1') @args2 *> $null
         Get-Content -Path (Join-Path $dir 'Microsoft.PowerShell_profile.legacy.ps1') | Should -Be '# hand-made legacy'
+    }
+
+    It 'skips Windows Terminal when it is not installed, without creating its folder' {
+        Join-Path $TestDrive 'localappdata\Packages' | Should -Not -Exist
     }
 
     It 'turns ~/.gitconfig into an include of the repo config, seeded into gitconfig.local' {
@@ -87,7 +93,7 @@ Describe 'bootstrap with excluded topics' {
         Set-Content -Path (Join-Path $repo 'dotfiles.local.psd1') -Value "@{ ExcludeTopics = 'demo' }"
         $profilePath = Join-Path $TestDrive 'excl\Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
         & (Join-Path $repo 'script\bootstrap.ps1') -SkipInstall -SkipNetwork -ConflictAction Skip `
-            -TokenMap @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'excl\home') } *> $null
+            -TokenMap @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'excl\home'); '{LOCALAPPDATA}' = (Join-Path $TestDrive 'localappdata') } *> $null
         Join-Path $repo 'demo\demo.local.ps1' | Should -Not -Exist
         Join-Path $repo 'powershell\profile.local.ps1' | Should -Exist
     }
@@ -100,7 +106,7 @@ Describe 'bootstrap local.ps1 hooks' {
         Set-Content -Path (Join-Path $repo 'demo\demo.local.ps1.template') -Value '# from template'
         $profilePath = Join-Path $TestDrive "$([guid]::NewGuid())\Microsoft.PowerShell_profile.ps1"
         $hookArgs = @{ SkipInstall = $true; SkipNetwork = $true; ConflictAction = 'Skip'
-            TokenMap = @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'hooks-home') } }
+            TokenMap = @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'hooks-home'); '{LOCALAPPDATA}' = (Join-Path $TestDrive 'localappdata') } }
     }
 
     It 'runs a topic local.ps1 (with the TokenMap) instead of copying its templates' {
