@@ -78,6 +78,35 @@ Describe 'bootstrap with excluded topics' {
     }
 }
 
+Describe 'bootstrap local.ps1 hooks' {
+    BeforeEach {
+        $repo = Copy-DotfilesRepo -Destination (Join-Path $TestDrive ([guid]::NewGuid()))
+        New-Item -ItemType Directory -Path (Join-Path $repo 'demo') | Out-Null
+        Set-Content -Path (Join-Path $repo 'demo\demo.local.ps1.template') -Value '# from template'
+        $profilePath = Join-Path $TestDrive "$([guid]::NewGuid())\Microsoft.PowerShell_profile.ps1"
+        $hookArgs = @{ SkipInstall = $true; SkipNetwork = $true; ConflictAction = 'Skip'
+            TokenMap = @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'hooks-home') } }
+    }
+
+    It 'runs a topic local.ps1 (with the TokenMap) instead of copying its templates' {
+        Set-Content -Path (Join-Path $repo 'demo\local.ps1') -Value @'
+param([hashtable] $TokenMap)
+Set-Content -Path (Join-Path $PSScriptRoot 'hook-ran.txt') -Value $TokenMap['~']
+'@
+        & (Join-Path $repo 'script\bootstrap.ps1') @hookArgs *> $null
+        $LASTEXITCODE | Should -Be 0
+        Get-Content -Path (Join-Path $repo 'demo\hook-ran.txt') | Should -Be (Join-Path $TestDrive 'hooks-home')
+        Join-Path $repo 'demo\demo.local.ps1' | Should -Not -Exist
+    }
+
+    It 'reports a failing hook, still links, and exits 1' {
+        Set-Content -Path (Join-Path $repo 'demo\local.ps1') -Value 'param([hashtable] $TokenMap) throw "hook broke"'
+        & (Join-Path $repo 'script\bootstrap.ps1') @hookArgs *> $null
+        $LASTEXITCODE | Should -Be 1
+        Get-Content -Path $profilePath -Raw | Should -Match 'Managed by dotfiles-pwsh'
+    }
+}
+
 Describe 'the $PROFILE stub' {
     BeforeAll {
         $repo = Copy-DotfilesRepo -Destination (Join-Path $TestDrive 'stub\repo')

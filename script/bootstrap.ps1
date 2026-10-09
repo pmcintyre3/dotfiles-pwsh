@@ -51,8 +51,21 @@ New-LocalFilesFromTemplates -Templates @(Get-ChildItem -Path $Root -Filter '*.te
 
 $config = Read-DotfilesConfig -Root $Root
 $topics = @(Get-DotfilesTopic -Root $Root -ExcludeTopics $config.ExcludeTopics)
+# A topic with local.ps1 creates its own machine-local files (e.g. git seeds gitconfig.local from the
+# current ~/.gitconfig), so it runs before linking replaces anything. Other topics copy their templates.
+$failedHooks = 0
 foreach ($topic in $topics) {
-    New-LocalFilesFromTemplates -Templates @(Get-ChildItem -Path $topic.FullName -Filter '*.template' -File -Recurse)
+    $localHook = Join-Path $topic.FullName 'local.ps1'
+    if (Test-Path -Path $localHook) {
+        try {
+            & $localHook -TokenMap $TokenMap
+        } catch {
+            $failedHooks++
+            Write-Status -Level Fail -Message "$($topic.Name)\local.ps1: $($_.Exception.Message)"
+        }
+    } else {
+        New-LocalFilesFromTemplates -Templates @(Get-ChildItem -Path $topic.FullName -Filter '*.template' -File -Recurse)
+    }
 }
 
 # 3. Links.
@@ -90,8 +103,8 @@ if (-not $SkipInstall) {
 # 5. Summary.
 $failedLinks = @($links | Where-Object { $_.Action -eq 'Failed' }).Count
 $failedInstalls = @($installs | Where-Object { -not $_.Succeeded }).Count
-if ($failedLinks + $failedInstalls -gt 0) {
-    Write-Status -Level Fail -Message "Done with problems: $failedLinks link(s) and $failedInstalls installer(s) failed. Fix them and re-run (safe to repeat)."
+if ($failedHooks + $failedLinks + $failedInstalls -gt 0) {
+    Write-Status -Level Fail -Message "Done with problems: $failedHooks local hook(s), $failedLinks link(s), and $failedInstalls installer(s) failed. Fix them and re-run (safe to repeat)."
     exit 1
 }
 Write-Status -Level Success -Message 'Done. Open a new terminal to load the profile.'
