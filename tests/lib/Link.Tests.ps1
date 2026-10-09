@@ -335,6 +335,17 @@ Describe 'Invoke-DotLinks' {
         $results[1].Reason | Should -Match 'Sometimes'
     }
 
+    It 'emits nothing for an optional entry whose source is not in the repo, and links it once it is' {
+        $root = New-TestDir
+        $topic = New-Item -ItemType Directory -Path (Join-Path $root 'ai')
+        Set-Content -Path (Join-Path $topic.FullName 'links.psd1') -Value "@{ Links = @( @{ Source = 'CLAUDE.md'; Target = '~\.claude\CLAUDE.md'; Method = 'Copy'; Optional = `$true } ) }"
+        $tokenMap = @{ '~' = (Join-Path $root 'home') }
+        Invoke-DotLinks -Topic $topic -Capability $noSymlink -TokenMap $tokenMap | Should -BeNullOrEmpty
+
+        Set-Content -Path (Join-Path $topic.FullName 'CLAUDE.md') -Value '# global'
+        (Invoke-DotLinks -Topic $topic -Capability $noSymlink -TokenMap $tokenMap).Action | Should -Be 'Linked'
+    }
+
     It 'ignores topics without links.psd1' {
         Invoke-DotLinks -Topic (Get-Item -Path (New-TestDir)) -Capability $noSymlink | Should -BeNullOrEmpty
     }

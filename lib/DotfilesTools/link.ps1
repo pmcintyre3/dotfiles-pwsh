@@ -240,7 +240,8 @@ function Invoke-DotLinks {
     <#
     .SYNOPSIS
         Apply every entry in each topic's links.psd1. Entry OnConflict overrides -ConflictAction;
-        entry RequireParent = $true skips targets whose folder doesn't exist (app not installed).
+        entry RequireParent = $true skips targets whose folder doesn't exist (app not installed);
+        entry Optional = $true links only once the source exists in the repo.
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -267,6 +268,8 @@ function Invoke-DotLinks {
 
         foreach ($entry in $entries) {
             try {
+                # Optional entries (e.g. a global CLAUDE.md nobody has written yet) stay silent until the source exists.
+                if ($entry.Optional -and -not (Test-Path -LiteralPath (Join-Path $t.FullName $entry.Source))) { continue }
                 $target = Resolve-DotPath -Path $entry.Target -TokenMap $TokenMap
                 if ($entry.RequireParent -and -not (Test-Path -LiteralPath (Split-Path -Path $target -Parent))) {
                     [pscustomobject]@{ Source = (Join-Path $t.FullName $entry.Source); Target = $target; Method = $null
