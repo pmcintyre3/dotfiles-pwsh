@@ -56,12 +56,14 @@ foreach ($topic in $topics) {
 }
 
 # 3. Links.
-$links = @(Invoke-DotLinks -Topic $topics -ConflictAction $ConflictAction -TokenMap $TokenMap -Capability $capability)
+$statePath = Join-Path $Root '.state\copy-hashes.json'
+$links = @(Invoke-DotLinks -Topic $topics -ConflictAction $ConflictAction -TokenMap $TokenMap -Capability $capability -StatePath $statePath)
 foreach ($link in $links) {
     switch ($link.Action) {
         'AlreadyLinked' { Write-Status -Level Skip -Message "$($link.Target) already linked" }
         'Skipped'       { Write-Status -Level Skip -Message "$($link.Target): $($link.Reason)" }
         'Failed'        { Write-Status -Level Fail -Message "$($link.Target): $($link.Reason)" }
+        'Pulled'        { Write-Status -Level User -Message "$($link.Target) was edited outside the repo; copied into $($link.Source). Review and commit it." }
         default         { Write-Status -Level Success -Message "$($link.Target) ($($link.Method), $($link.Action))" }
     }
 }

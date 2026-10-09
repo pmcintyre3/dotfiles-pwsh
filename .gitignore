@@ -9,3 +9,6 @@ git/gitconfig.local
 
 # Test output
 testResults.xml
+
+# Machine-local link state (hashes of copied files), written by script/bootstrap.ps1
+.state/

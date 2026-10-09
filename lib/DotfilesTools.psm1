@@ -18,4 +18,5 @@ Export-ModuleMember -Function @(
     'New-DotLink'
     'Invoke-DotLinks'
     'Reset-DotLinkPrompt'
+    'Test-CanPrompt'
 )

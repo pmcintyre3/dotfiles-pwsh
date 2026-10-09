@@ -182,6 +182,70 @@ Describe 'New-DotLink' {
             $r.Reason | Should -Match 'Source not found'
         }
     }
+
+    Context 'copy drift' {
+        BeforeEach {
+            $state = Join-Path $dir 'state\copy-hashes.json'
+            $copyArgs = @{ Source = $source; Target = $target; Method = 'Copy'; Capability = $noSymlink; StatePath = $state }
+            Mock -ModuleName DotfilesTools Test-CanPrompt { $true }
+        }
+
+        It 'records the hash of what it copied' {
+            (New-DotLink @copyArgs).Action | Should -Be 'Linked'
+            $recorded = (Get-Content -Path $state -Raw | ConvertFrom-Json -AsHashtable)[$target.ToLowerInvariant()]
+            $recorded | Should -Be (Get-FileHash -Path $source).Hash
+        }
+
+        It 'records the hash when the target already matches (first run on a machine that is already set up)' {
+            New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
+            Copy-Item -Path $source -Destination $target
+            (New-DotLink @copyArgs).Action | Should -Be 'AlreadyLinked'
+            $state | Should -Exist
+        }
+
+        It 'refreshes the copy without asking when only the repo changed' {
+            New-DotLink @copyArgs | Out-Null
+            Set-Content -Path $source -Value 'repo v2'
+            Mock -ModuleName DotfilesTools Read-Host { throw 'should not prompt' }
+            (New-DotLink @copyArgs).Action | Should -Be 'Updated'
+            Get-Content -Path $target | Should -Be 'repo v2'
+            Get-ChildItem -Path (Split-Path $target) -Filter '*.backup-*' | Should -BeNullOrEmpty
+        }
+
+        It 'asks before overwriting edits made outside the repo, and can pull them into the repo' {
+            New-DotLink @copyArgs | Out-Null
+            Set-Content -Path $target -Value 'edited in the Settings UI'
+            Mock -ModuleName DotfilesTools Read-Host { 'p' }
+            (New-DotLink @copyArgs).Action | Should -Be 'Pulled'
+            Get-Content -Path $source | Should -Be 'edited in the Settings UI'
+            (New-DotLink @copyArgs).Action | Should -Be 'AlreadyLinked'
+        }
+
+        It 'reports edits made outside the repo as Failed in a non-interactive session' {
+            New-DotLink @copyArgs | Out-Null
+            Set-Content -Path $target -Value 'edited in the Settings UI'
+            Mock -ModuleName DotfilesTools Test-CanPrompt { $false }
+            $r = New-DotLink @copyArgs
+            $r.Action | Should -Be 'Failed'
+            $r.Reason | Should -Match 'edited outside the repo'
+            Get-Content -Path $target | Should -Be 'edited in the Settings UI'
+        }
+
+        It 'treats a target with no record as a normal conflict (first run)' {
+            New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
+            Set-Content -Path $target -Value 'pre-existing'
+            (New-DotLink @copyArgs -ConflictAction Backup).Action | Should -Be 'BackedUp'
+        }
+
+        It 'treats a corrupt state file as no record' {
+            New-Item -ItemType Directory -Path (Split-Path $state) -Force | Out-Null
+            Set-Content -Path $state -Value '{ not json'
+            New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
+            Set-Content -Path $target -Value 'pre-existing'
+            (New-DotLink @copyArgs -ConflictAction Backup).Action | Should -Be 'BackedUp'
+            (Get-Content -Path $state -Raw | ConvertFrom-Json -AsHashtable).Count | Should -Be 1
+        }
+    }
 }
 
 Describe 'Invoke-DotLinks' {
@@ -208,6 +272,27 @@ Describe 'Invoke-DotLinks' {
         $results.Action | Should -Be @('Linked', 'BackedUp')
         Get-Content -Path (Join-Path $fakeHome 'demo\config.txt') | Should -Be 'cfg'
         Get-Content -Path $profilePath | Should -Be ". $(Join-Path $topic.FullName 'config.txt')"
+    }
+
+    It 'passes StatePath through to copy links' {
+        $root = New-TestDir
+        $topic = New-Item -ItemType Directory -Path (Join-Path $root 'demo')
+        Set-Content -Path (Join-Path $topic.FullName 'c.txt') -Value 'c'
+        Set-Content -Path (Join-Path $topic.FullName 'links.psd1') -Value "@{ Links = @( @{ Source = 'c.txt'; Target = '~\demo\c.txt'; Method = 'Copy' } ) }"
+        $state = Join-Path $root '.state\copy-hashes.json'
+        Invoke-DotLinks -Topic $topic -Capability $noSymlink -StatePath $state -TokenMap @{ '~' = (Join-Path $root 'home') } | Out-Null
+        $state | Should -Exist
+    }
+
+    It 'skips entries whose RequireParent folder is missing, without creating it' {
+        $root = New-TestDir
+        $topic = New-Item -ItemType Directory -Path (Join-Path $root 'app')
+        Set-Content -Path (Join-Path $topic.FullName 'settings.json') -Value '{}'
+        Set-Content -Path (Join-Path $topic.FullName 'links.psd1') -Value "@{ Links = @( @{ Source = 'settings.json'; Target = '~\NotInstalled\LocalState\settings.json'; Method = 'Copy'; RequireParent = `$true } ) }"
+        $r = Invoke-DotLinks -Topic $topic -Capability $noSymlink -TokenMap @{ '~' = (Join-Path $root 'home') }
+        $r.Action | Should -Be 'Skipped'
+        $r.Reason | Should -Match '^Not installed'
+        Join-Path $root 'home\NotInstalled' | Should -Not -Exist
     }
 
     It 'reports a malformed links.psd1 or a bad entry as Failed and keeps going' {
