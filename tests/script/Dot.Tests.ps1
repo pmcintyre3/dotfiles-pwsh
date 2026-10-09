@@ -33,4 +33,26 @@ Describe 'bin/dot.ps1' {
         & $dot *> $null
         $marker | Should -Exist
     }
+
+    It 'passes -Upgrade to bootstrap' {
+        Set-Content -Path (Join-Path $repo 'script\bootstrap.ps1') -Value "param([switch] `$Upgrade) Set-Content -Path '$marker' -Value ""upgrade=`$Upgrade""; exit 0"
+        Mock git { $global:LASTEXITCODE = 0 }
+        & $dot -Upgrade *> $null
+        Get-Content -Path $marker | Should -Be 'upgrade=True'
+    }
+
+    It '-Elevated runs script\elevated.ps1 elevated, returns its exit code, and skips pull and bootstrap' {
+        Mock git { throw 'git should not run' }
+        Mock Start-Process { [pscustomobject]@{ ExitCode = 3 } }
+        & $dot -Elevated *> $null
+        $LASTEXITCODE | Should -Be 3
+        Should -Invoke Start-Process -Times 1 -Exactly -ParameterFilter { $Verb -eq 'RunAs' -and "$ArgumentList" -like '*script\elevated.ps1*' }
+        $marker | Should -Not -Exist
+    }
+
+    It '-Elevated reports a declined UAC prompt and exits 1' {
+        Mock Start-Process { throw 'The operation was canceled by the user.' }
+        & $dot -Elevated *> $null
+        $LASTEXITCODE | Should -Be 1
+    }
 }

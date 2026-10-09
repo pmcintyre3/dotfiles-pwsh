@@ -11,6 +11,7 @@ param(
     [ValidateSet('Prompt', 'Skip', 'Overwrite', 'Backup')] [string] $ConflictAction = 'Prompt',
     [switch] $SkipInstall,
     [switch] $SkipNetwork,
+    [switch] $Upgrade,
     [hashtable] $TokenMap = @{},
     [string] $Root = (Split-Path -Path $PSScriptRoot -Parent)
 )
@@ -97,7 +98,7 @@ if ($profileLink) {
 # 4. Topic installers.
 $installs = @()
 if (-not $SkipInstall) {
-    $installs = @(& (Join-Path $PSScriptRoot 'install.ps1') -Root $Root)
+    $installs = @(& (Join-Path $PSScriptRoot 'install.ps1') -Root $Root -Upgrade:$Upgrade)
 }
 
 # 5. Summary.
