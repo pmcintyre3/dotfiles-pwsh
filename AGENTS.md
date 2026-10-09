@@ -18,6 +18,12 @@ Windows / PowerShell 7 dotfiles, organized like haacked/dotfiles (topic folders)
   hashes in `.state/` so edits made outside the repo are never overwritten silently. Copied app files
   need a `-text` line in `.gitattributes` so line-ending conversion doesn't look like an edit.
 - Git config values use forward slashes or `~/` (backslashes are escapes in git config).
+- Topic installers may declare `-Upgrade` (gets `dot -Upgrade`) and `-MachineOnly` (run by
+  `script/elevated.ps1` for `dot -Elevated`). A `-MachineOnly` run may be a different user account, so it
+  must never touch HKCU, `$HOME`, or per-user installs.
+- Never call winget/scoop/choco/code directly from tests; mock the wrappers in
+  `packages/package-tools.ps1` or pass a fake command (`vscode/install.ps1 -CodeCommand`). Registry
+  tests use Pester's `TestRegistry:` drive.
 - Profile load order: `powershell/profile.local.ps1` → `*/env.ps1` → `*/path.ps1` → `*/functions/*.ps1`
   → `*/aliases.ps1` → `*/completion.ps1`. Within a stage, topics load alphabetically.
 - `env.ps1` only sets defaults with `??=`; machine values belong in the gitignored `profile.local.ps1`.

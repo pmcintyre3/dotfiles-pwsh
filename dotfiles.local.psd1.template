@@ -4,9 +4,15 @@
     # Topics this machine skips entirely: installers, links, and profile loading. Example: @('ai')
     ExcludeTopics = @()
 
-    # Never | Prompt | Auto. Phase 1 has no elevated steps; this takes effect in Phase 3.
+    # Machine-wide changes (HKLM settings, machine-scope packages):
+    #   Never  - never.
+    #   Prompt - only when you run `dot -Elevated` (one UAC prompt).
+    #   Auto   - like Prompt, and also inline whenever dot already runs elevated.
     Elevation     = 'Never'
 
     # PowerShell repository for module installs (an internal feed on locked-down machines).
     PSRepository  = 'PSGallery'
+
+    # Package groups from packages/packages.psd1 to install: core, dev, apps, personal.
+    PackageGroups = @('core', 'dev')
 }
