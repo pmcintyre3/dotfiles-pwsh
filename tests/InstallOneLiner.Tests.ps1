@@ -38,6 +38,14 @@ Describe 'install.ps1 (one-liner)' {
         Should -Invoke git -Times 1 -Exactly -ParameterFilter { $args -contains 'clone' -and $args -contains $DotfilesRepoUrl }
     }
 
+    It 'fails loudly when bootstrap reports problems' {
+        $DotfilesTarget = Join-Path $TestDrive 'boot\.dotfiles'
+        Mock Install-DotfilesPwsh { $true }
+        Mock Get-DotfilesSource { }
+        Mock pwsh { $global:LASTEXITCODE = 1 }
+        { Install-Dotfiles } | Should -Throw '*bootstrap*'
+    }
+
     It 'falls back to the zip download when git is unavailable' {
         $DotfilesTarget = Join-Path $TestDrive 'zip\.dotfiles'
         Mock Install-DotfilesGit { $false }

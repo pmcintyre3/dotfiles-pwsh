@@ -13,8 +13,20 @@ Describe 'Resolve-DotPath' {
     It 'expands ~ to the home directory' {
         Resolve-DotPath -Path '~\.gitconfig' | Should -Be (Join-Path $HOME '.gitconfig')
     }
-    It 'expands {PROFILE} to the current-user, current-host profile' {
-        Resolve-DotPath -Path '{PROFILE}' | Should -Be $PROFILE.CurrentUserCurrentHost
+    It 'expands {PROFILE} to the console (Microsoft.PowerShell) profile' {
+        Resolve-DotPath -Path '{PROFILE}' |
+            Should -Be (Join-Path (Split-Path $PROFILE.CurrentUserAllHosts) 'Microsoft.PowerShell_profile.ps1')
+    }
+    It 'pins {PROFILE} to the console profile even when run from another host (e.g. VS Code)' {
+        $saved = $global:PROFILE
+        try {
+            $global:PROFILE = 'C:\Docs\PowerShell\Microsoft.VSCode_profile.ps1' |
+                Add-Member -NotePropertyName CurrentUserCurrentHost -NotePropertyValue 'C:\Docs\PowerShell\Microsoft.VSCode_profile.ps1' -PassThru |
+                Add-Member -NotePropertyName CurrentUserAllHosts -NotePropertyValue 'C:\Docs\PowerShell\profile.ps1' -PassThru
+            Resolve-DotPath -Path '{PROFILE}' | Should -Be 'C:\Docs\PowerShell\Microsoft.PowerShell_profile.ps1'
+        } finally {
+            $global:PROFILE = $saved
+        }
     }
     It 'applies TokenMap overrides' {
         Resolve-DotPath -Path '{PROFILE}' -TokenMap @{ '{PROFILE}' = 'X:\p.ps1' } | Should -Be 'X:\p.ps1'

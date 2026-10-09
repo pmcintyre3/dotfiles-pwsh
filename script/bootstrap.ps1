@@ -37,16 +37,25 @@ if ($capability.PolicyFromGpo -and $capability.ExecutionPolicy -in 'AllSigned', 
     Write-Status -Level Fail -Message "Group Policy sets the execution policy to $($capability.ExecutionPolicy). Unsigned profile scripts won't run."
 }
 
-# 2. Machine-local files from templates (never overwritten).
-Get-ChildItem -Path $Root -Filter '*.template' -File -Recurse | ForEach-Object {
-    if (New-LocalFileFromTemplate -TemplatePath $_.FullName) {
-        Write-Status -Level Success -Message "Created $($_.FullName.Substring($Root.Length + 1) -replace '\.template$', '')"
+# 2. Machine-local files from templates (never overwritten). Repo-root templates first, because
+#    dotfiles.local.psd1 decides which topics are enabled; then templates inside enabled topics only.
+function New-LocalFilesFromTemplates {
+    param([System.IO.FileInfo[]] $Templates)
+    foreach ($template in $Templates) {
+        if (New-LocalFileFromTemplate -TemplatePath $template.FullName) {
+            Write-Status -Level Success -Message "Created $($template.FullName.Substring($Root.Length + 1) -replace '\.template$', '')"
+        }
     }
+}
+New-LocalFilesFromTemplates -Templates @(Get-ChildItem -Path $Root -Filter '*.template' -File)
+
+$config = Read-DotfilesConfig -Root $Root
+$topics = @(Get-DotfilesTopic -Root $Root -ExcludeTopics $config.ExcludeTopics)
+foreach ($topic in $topics) {
+    New-LocalFilesFromTemplates -Templates @(Get-ChildItem -Path $topic.FullName -Filter '*.template' -File -Recurse)
 }
 
 # 3. Links.
-$config = Read-DotfilesConfig -Root $Root
-$topics = @(Get-DotfilesTopic -Root $Root -ExcludeTopics $config.ExcludeTopics)
 $links = @(Invoke-DotLinks -Topic $topics -ConflictAction $ConflictAction -TokenMap $TokenMap -Capability $capability)
 foreach ($link in $links) {
     switch ($link.Action) {

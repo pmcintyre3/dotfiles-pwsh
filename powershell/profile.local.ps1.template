@@ -6,6 +6,7 @@
 # $env:ProjectHome = 'C:\Projects'
 
 $global:ProjectPaths ??= @{}
-# $global:ProjectPaths.Tools       = 'C:\Tools'
-# $global:ProjectPaths.Workspace   = "$env:ProjectHome\Personal"
-# $global:ProjectPaths.Credentials = "$env:ProjectHome\Credentials"
+# $global:ProjectPaths.Tools          = 'C:\Tools'
+# $global:ProjectPaths.AllToolsOnPath = $true    # every Tools subfolder on PATH, not just Terraform/doctl
+# $global:ProjectPaths.Workspace      = "$env:ProjectHome\Personal"
+# $global:ProjectPaths.Credentials    = "$env:ProjectHome\Credentials"

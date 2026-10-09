@@ -68,6 +68,9 @@ function Install-Dotfiles {
     }
     Get-DotfilesSource
     & pwsh -NoProfile -ExecutionPolicy Bypass -File (Join-Path $DotfilesTarget 'script\bootstrap.ps1')
+    if ($LASTEXITCODE -ne 0) {
+        throw "bootstrap reported problems (exit $LASTEXITCODE). Fix them, then re-run $DotfilesTarget\script\bootstrap.ps1 (safe to repeat)."
+    }
 }
 
 if ($env:DOTFILES_INSTALL_NOEXEC -ne '1') { Install-Dotfiles }

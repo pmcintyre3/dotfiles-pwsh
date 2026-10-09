@@ -180,14 +180,28 @@ function Invoke-DotLinks {
         $manifest = Join-Path $t.FullName 'links.psd1'
         if (-not (Test-Path -Path $manifest)) { continue }
 
-        foreach ($entry in (Import-PowerShellDataFile -Path $manifest).Links) {
-            $action = if ($entry.OnConflict) { $entry.OnConflict } else { $ConflictAction }
-            New-DotLink -Source (Join-Path $t.FullName $entry.Source) `
-                -Target (Resolve-DotPath -Path $entry.Target -TokenMap $TokenMap) `
-                -Method $entry.Method `
-                -Template $entry.Template `
-                -ConflictAction $action `
-                -Capability $Capability
+        # A bad manifest or entry is one Failed result, not the end of the whole run.
+        try {
+            $entries = (Import-PowerShellDataFile -Path $manifest -ErrorAction Stop).Links
+        } catch {
+            [pscustomobject]@{ Source = $manifest; Target = $null; Method = $null; Action = 'Failed'
+                Reason = "Invalid $($manifest): $($_.Exception.Message)"; BackupPath = $null }
+            continue
+        }
+
+        foreach ($entry in $entries) {
+            try {
+                $action = if ($entry.OnConflict) { $entry.OnConflict } else { $ConflictAction }
+                New-DotLink -Source (Join-Path $t.FullName $entry.Source) `
+                    -Target (Resolve-DotPath -Path $entry.Target -TokenMap $TokenMap) `
+                    -Method $entry.Method `
+                    -Template $entry.Template `
+                    -ConflictAction $action `
+                    -Capability $Capability
+            } catch {
+                [pscustomobject]@{ Source = $entry.Source; Target = $entry.Target; Method = $null; Action = 'Failed'
+                    Reason = "Invalid entry in $($manifest): $($_.Exception.Message)"; BackupPath = $null }
+            }
         }
     }
 }

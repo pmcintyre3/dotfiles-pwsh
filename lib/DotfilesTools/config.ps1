@@ -24,7 +24,8 @@ function Resolve-DotPath {
 
     $tokens = @{
         '~'              = $HOME
-        '{PROFILE}'      = $PROFILE.CurrentUserCurrentHost
+        # The console host's profile, even when dot runs from another host (VS Code's is Microsoft.VSCode_profile.ps1).
+        '{PROFILE}'      = Join-Path (Split-Path -Path $PROFILE.CurrentUserAllHosts -Parent) 'Microsoft.PowerShell_profile.ps1'
         '{LOCALAPPDATA}' = $env:LOCALAPPDATA
         '{APPDATA}'      = $env:APPDATA
     }

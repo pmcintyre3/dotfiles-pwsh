@@ -210,6 +210,25 @@ Describe 'Invoke-DotLinks' {
         Get-Content -Path $profilePath | Should -Be ". $(Join-Path $topic.FullName 'config.txt')"
     }
 
+    It 'reports a malformed links.psd1 or a bad entry as Failed and keeps going' {
+        $root = New-TestDir
+        $bad = New-Item -ItemType Directory -Path (Join-Path $root 'bad')
+        Set-Content -Path (Join-Path $bad.FullName 'links.psd1') -Value '@{ Links = @( '
+        $odd = New-Item -ItemType Directory -Path (Join-Path $root 'odd')
+        Set-Content -Path (Join-Path $odd.FullName 'a.txt') -Value 'a'
+        Set-Content -Path (Join-Path $odd.FullName 'links.psd1') -Value "@{ Links = @( @{ Source = 'a.txt'; Target = '~\odd\a.txt'; Method = 'Copy'; OnConflict = 'Sometimes' } ) }"
+        $good = New-Item -ItemType Directory -Path (Join-Path $root 'good')
+        Set-Content -Path (Join-Path $good.FullName 'g.txt') -Value 'g'
+        Set-Content -Path (Join-Path $good.FullName 'links.psd1') -Value "@{ Links = @( @{ Source = 'g.txt'; Target = '~\good\g.txt'; Method = 'Copy' } ) }"
+
+        $results = @(Invoke-DotLinks -Topic $bad, $odd, $good -ConflictAction Skip -Capability $noSymlink `
+                -TokenMap @{ '~' = (Join-Path $root 'home') })
+
+        $results.Action | Should -Be @('Failed', 'Failed', 'Linked')
+        $results[0].Reason | Should -Match 'links\.psd1'
+        $results[1].Reason | Should -Match 'Sometimes'
+    }
+
     It 'ignores topics without links.psd1' {
         Invoke-DotLinks -Topic (Get-Item -Path (New-TestDir)) -Capability $noSymlink | Should -BeNullOrEmpty
     }

@@ -64,6 +64,20 @@ Describe 'script/bootstrap.ps1' {
     }
 }
 
+Describe 'bootstrap with excluded topics' {
+    It 'does not create local files for excluded topics' {
+        $repo = Copy-DotfilesRepo -Destination (Join-Path $TestDrive 'excl\repo')
+        New-Item -ItemType Directory -Path (Join-Path $repo 'demo') | Out-Null
+        Set-Content -Path (Join-Path $repo 'demo\demo.local.ps1.template') -Value '# demo'
+        Set-Content -Path (Join-Path $repo 'dotfiles.local.psd1') -Value "@{ ExcludeTopics = 'demo' }"
+        $profilePath = Join-Path $TestDrive 'excl\Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
+        & (Join-Path $repo 'script\bootstrap.ps1') -SkipInstall -SkipNetwork -ConflictAction Skip `
+            -TokenMap @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'excl\home') } *> $null
+        Join-Path $repo 'demo\demo.local.ps1' | Should -Not -Exist
+        Join-Path $repo 'powershell\profile.local.ps1' | Should -Exist
+    }
+}
+
 Describe 'the $PROFILE stub' {
     BeforeAll {
         $repo = Copy-DotfilesRepo -Destination (Join-Path $TestDrive 'stub\repo')
