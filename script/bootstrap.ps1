@@ -57,6 +57,19 @@ foreach ($link in $links) {
     }
 }
 
+# $PROFILE syncs through OneDrive, so the new stub reaches machines that have no clone yet. Seed the
+# legacy profile the stub falls back to from the profile we just backed up (never overwrite one).
+# Remove in Phase 5, together with the stub's legacy branch.
+$profileTarget = Resolve-DotPath -Path '{PROFILE}' -TokenMap $TokenMap
+$profileLink = $links | Where-Object { $_.Target -eq $profileTarget -and $_.Action -eq 'BackedUp' } | Select-Object -First 1
+if ($profileLink) {
+    $legacyProfile = Join-Path (Split-Path -Path $profileTarget -Parent) 'Microsoft.PowerShell_profile.legacy.ps1'
+    if (-not (Test-Path -Path $legacyProfile)) {
+        Copy-Item -LiteralPath $profileLink.BackupPath -Destination $legacyProfile
+        Write-Status -Level Success -Message "Created $legacyProfile (machines without a clone keep their old profile)"
+    }
+}
+
 # 4. Topic installers.
 $installs = @()
 if (-not $SkipInstall) {

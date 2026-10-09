@@ -17,6 +17,8 @@ if (Test-Path -Path $dotfilesProfile) {
     . $dotfilesProfile
 } elseif (Test-Path -Path $legacyProfile) {
     . $legacyProfile
+} else {
+    Write-Warning "dotfiles: no clone at $dotfilesClone and no legacy profile next to this file; nothing loaded. Run the dotfiles-pwsh one-liner to set up this machine."
 }
 Remove-Variable -Name dotfilesClone, dotfilesProfile, legacyProfile -ErrorAction Ignore
 '@

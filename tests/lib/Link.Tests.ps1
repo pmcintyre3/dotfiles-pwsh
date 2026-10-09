@@ -55,6 +55,8 @@ Describe 'New-DotLink' {
             New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
             Set-Content -Path $target -Value 'user content'
             $linkArgs = @{ Source = $source; Target = $target; Method = 'Copy'; Capability = $noSymlink }
+            # The test runner's stdin is usually redirected; prompt tests simulate an interactive console.
+            Mock -ModuleName DotfilesTools Test-CanPrompt { $true }
         }
 
         It 'Skip leaves the target untouched' {
@@ -91,6 +93,33 @@ Describe 'New-DotLink' {
             (New-DotLink @linkArgs).Action | Should -Be 'BackedUp'
             Should -Invoke -ModuleName DotfilesTools Read-Host -Times 2 -Exactly
             Remove-Variable -Name DotLinkTestAnswers -Scope Global
+        }
+
+        It 'Prompt fails without asking when the session is not interactive' {
+            Mock -ModuleName DotfilesTools Test-CanPrompt { $false }
+            Mock -ModuleName DotfilesTools Read-Host { 'b' }
+            $r = New-DotLink @linkArgs
+            $r.Action | Should -Be 'Failed'
+            $r.Reason | Should -Match 'non-interactive'
+            Should -Invoke -ModuleName DotfilesTools Read-Host -Times 0 -Exactly
+            Get-Content -Path $target | Should -Be 'user content'
+        }
+
+        It 'Prompt does not hang when stdin is at end-of-input (Task Scheduler, piped runs)' {
+            $modulePath = (Resolve-Path (Join-Path $PSScriptRoot '..\..\lib\DotfilesTools.psm1')).Path
+            $command = "Import-Module '$modulePath'; " +
+                "(New-DotLink -Source '$source' -Target '$target' -Method Copy -Capability ([pscustomobject]@{ CanSymlink = `$false })).Action"
+            $psi = [System.Diagnostics.ProcessStartInfo]::new('pwsh', @('-NoProfile', '-Command', $command))
+            $psi.RedirectStandardInput = $true
+            $psi.RedirectStandardOutput = $true
+            $psi.UseShellExecute = $false
+            $process = [System.Diagnostics.Process]::Start($psi)
+            $process.StandardInput.Close()
+            $finished = $process.WaitForExit(30000)
+            if (-not $finished) { $process.Kill() }
+            $finished | Should -BeTrue -Because 'the conflict prompt must not loop on an empty stdin'
+            $process.StandardOutput.ReadToEnd().Trim() | Should -Be 'Failed'
+            Get-Content -Path $target | Should -Be 'user content'
         }
 
         It "Prompt fails cleanly when the host can't prompt" {

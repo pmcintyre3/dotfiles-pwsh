@@ -32,6 +32,12 @@ Describe 'script/bootstrap.ps1' {
         Get-Content -Path $backup[0].FullName | Should -Be '# old profile'
     }
 
+    It 'seeds Microsoft.PowerShell_profile.legacy.ps1 from the backed-up profile (keeps unmigrated OneDrive machines working)' {
+        $legacy = Join-Path (Split-Path $profilePath) 'Microsoft.PowerShell_profile.legacy.ps1'
+        $legacy | Should -Exist
+        Get-Content -Path $legacy | Should -Be '# old profile'
+    }
+
     It 'creates local files from templates' {
         Join-Path $repo 'dotfiles.local.psd1' | Should -Exist
         Join-Path $repo 'powershell\profile.local.ps1' | Should -Exist
@@ -43,6 +49,18 @@ Describe 'script/bootstrap.ps1' {
         $LASTEXITCODE | Should -Be 0
         Get-ChildItem -Path (Split-Path $profilePath) -Filter '*.backup-*' | Should -HaveCount 1
         Get-Content -Path (Join-Path $repo 'powershell\profile.local.ps1') -Raw | Should -Match '# my edit'
+    }
+
+    It 'never overwrites an existing legacy profile' {
+        $dir = Join-Path $TestDrive 'existing-legacy'
+        $otherProfile = Join-Path $dir 'Microsoft.PowerShell_profile.ps1'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        Set-Content -Path $otherProfile -Value '# newer profile'
+        Set-Content -Path (Join-Path $dir 'Microsoft.PowerShell_profile.legacy.ps1') -Value '# hand-made legacy'
+        $args2 = $bootstrapArgs.Clone()
+        $args2.TokenMap = @{ '{PROFILE}' = $otherProfile; '~' = (Join-Path $TestDrive 'home') }
+        & (Join-Path $repo 'script\bootstrap.ps1') @args2 *> $null
+        Get-Content -Path (Join-Path $dir 'Microsoft.PowerShell_profile.legacy.ps1') | Should -Be '# hand-made legacy'
     }
 }
 
@@ -74,5 +92,15 @@ Describe 'the $PROFILE stub' {
         $legacy, $dotfiles = Invoke-Stub -DotfilesRoot (Join-Path $TestDrive 'no-clone-here')
         $legacy | Should -Be 'True'
         $dotfiles | Should -Be 'False'
+    }
+
+    It 'warns instead of silently loading nothing when there is no clone and no legacy profile' {
+        $bareDir = Join-Path $TestDrive 'bare\Documents\PowerShell'
+        New-Item -ItemType Directory -Path $bareDir -Force | Out-Null
+        $bareStub = Join-Path $bareDir 'Microsoft.PowerShell_profile.ps1'
+        Set-Content -Path $bareStub -Value $stub
+        $command = "`$env:DOTFILES_ROOT = '$(Join-Path $TestDrive 'no-clone-here')'; . '$bareStub'"
+        $output = pwsh -NoProfile -NonInteractive -Command $command *>&1 | ForEach-Object { "$_" }
+        ($output -join "`n") | Should -Match 'dotfiles: no clone'
     }
 }

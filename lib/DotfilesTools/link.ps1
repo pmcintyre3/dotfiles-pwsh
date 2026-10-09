@@ -55,12 +55,21 @@ function Test-DotLinkCurrent {
     return $false
 }
 
+function Test-CanPrompt {
+    # Private. Read-Host returns '' forever on redirected/EOF stdin (Task Scheduler, piped runs),
+    # which would spin the conflict prompt; only prompt on a real interactive console.
+    return [Environment]::UserInteractive -and -not [Console]::IsInputRedirected
+}
+
 function Get-DotLinkConflictAction {
     # Private. Haacked's link_file prompt: [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all.
     param([string] $Target, [string] $Requested)
 
     if ($Requested -ne 'Prompt') { return $Requested }
     if ($script:StickyConflictAction) { return $script:StickyConflictAction }
+    if (-not (Test-CanPrompt)) {
+        throw "Target exists and this is a non-interactive session, so I can't ask what to do. Re-run interactively or pass -ConflictAction."
+    }
 
     while ($true) {
         $answer = Read-Host "File already exists: $Target. [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all"
@@ -92,7 +101,7 @@ function New-DotLink {
         [pscustomobject] $Capability = (Get-MachineCapability -SkipNetwork)
     )
 
-    $result = [pscustomobject]@{ Source = $Source; Target = $Target; Method = $null; Action = $null; Reason = $null }
+    $result = [pscustomobject]@{ Source = $Source; Target = $Target; Method = $null; Action = $null; Reason = $null; BackupPath = $null }
     try {
         if (-not (Test-Path -LiteralPath $Source)) { throw "Source not found: $Source" }
         $isDirectory = Test-Path -LiteralPath $Source -PathType Container
@@ -122,7 +131,8 @@ function New-DotLink {
                     return $result
                 }
                 'Backup' {
-                    Move-Item -LiteralPath $Target -Destination "$Target.backup-$(Get-Date -Format yyyyMMddHHmmss)"
+                    $result.BackupPath = "$Target.backup-$(Get-Date -Format yyyyMMddHHmmss)"
+                    Move-Item -LiteralPath $Target -Destination $result.BackupPath
                     $action = 'BackedUp'
                 }
                 'Overwrite' {
