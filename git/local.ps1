@@ -16,10 +16,17 @@ if (Test-Path -Path $LocalPath) { return }
 
 $currentConfig = Resolve-DotPath -Path '~\.gitconfig' -TokenMap $TokenMap
 $values = [ordered]@{}
-foreach ($key in 'user.name', 'user.email', 'user.signingkey', 'gpg.format', 'gpg.ssh.program', 'commit.gpgsign') {
-    if (-not (Test-Path -Path $currentConfig)) { break }
-    $value = git config --file $currentConfig --get $key 2>$null
-    if ($LASTEXITCODE -eq 0 -and $value) { $values[$key] = $value }
+# git prints UTF-8; read it as UTF-8 whatever the console's code page is (often 437), or accented names get garbled.
+$savedEncoding = [Console]::OutputEncoding
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+try {
+    foreach ($key in 'user.name', 'user.email', 'user.signingkey', 'gpg.format', 'gpg.ssh.program', 'commit.gpgsign') {
+        if (-not (Test-Path -Path $currentConfig)) { break }
+        $value = git config --file $currentConfig --get $key 2>$null
+        if ($LASTEXITCODE -eq 0 -and $value) { $values[$key] = $value }
+    }
+} finally {
+    [Console]::OutputEncoding = $savedEncoding
 }
 
 foreach ($key in 'user.name', 'user.email') {

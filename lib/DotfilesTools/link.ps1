@@ -97,7 +97,8 @@ function Get-DotLinkConflictAction {
     param([string] $Target, [string] $Requested, [switch] $AllowPull)
 
     if ($Requested -ne 'Prompt') { return $Requested }
-    if ($script:StickyConflictAction) { return $script:StickyConflictAction }
+    # An "all" answer given for another file never decides what happens to edits made outside the repo.
+    if ($script:StickyConflictAction -and -not $AllowPull) { return $script:StickyConflictAction }
     if (-not (Test-CanPrompt)) {
         throw "Target exists and this is a non-interactive session, so I can't ask what to do. Re-run interactively or pass -ConflictAction."
     }
@@ -150,7 +151,8 @@ function New-DotLink {
         $content = $null
         if ($chosen -eq 'Include') {
             if (-not $Template) { throw 'Method Include requires a Template' }
-            $content = $Template.Replace('{Source}', $Source)
+            # {SourcePosix}: forward slashes, for files like gitconfig where backslashes are escapes.
+            $content = $Template.Replace('{SourcePosix}', $Source.Replace('\', '/')).Replace('{Source}', $Source)
         }
 
         if (Test-DotLinkCurrent -Method $chosen -Source $Source -Target $Target -Content $content) {

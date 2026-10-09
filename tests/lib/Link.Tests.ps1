@@ -43,6 +43,12 @@ Describe 'New-DotLink' {
                 Should -Be 'AlreadyLinked'
         }
 
+        It 'renders {SourcePosix} with forward slashes (for git config paths, where backslashes are escapes)' {
+            $r = New-DotLink -Source $source -Target $target -Method Include -Template 'path = {SourcePosix}' -Capability $noSymlink
+            $r.Action | Should -Be 'Linked'
+            Get-Content -Path $target -Raw | Should -Match ([regex]::Escape("path = $($source.Replace('\', '/'))"))
+        }
+
         It 'fails when no template is given' {
             $r = New-DotLink -Source $source -Target $target -Method Include -Capability $noSymlink
             $r.Action | Should -Be 'Failed'
@@ -229,6 +235,21 @@ Describe 'New-DotLink' {
             $r.Action | Should -Be 'Failed'
             $r.Reason | Should -Match 'edited outside the repo'
             Get-Content -Path $target | Should -Be 'edited in the Settings UI'
+        }
+
+        It 'does not apply an earlier "all" answer to a copy edited outside the repo' {
+            New-DotLink @copyArgs | Out-Null
+            Set-Content -Path $target -Value 'edited in the Settings UI'
+            # An earlier, unrelated conflict was answered "[O]verwrite all".
+            $other = Join-Path (Split-Path $target) 'other.txt'
+            Set-Content -Path $other -Value 'x'
+            Mock -ModuleName DotfilesTools Read-Host { 'O' }
+            (New-DotLink -Source $source -Target $other -Method Copy -Capability $noSymlink).Action | Should -Be 'Overwritten'
+
+            Mock -ModuleName DotfilesTools Read-Host { 's' }
+            (New-DotLink @copyArgs).Action | Should -Be 'Skipped'
+            Get-Content -Path $target | Should -Be 'edited in the Settings UI'
+            Should -Invoke -ModuleName DotfilesTools Read-Host -Times 2 -Exactly
         }
 
         It 'treats a target with no record as a normal conflict (first run)' {

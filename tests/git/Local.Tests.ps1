@@ -30,6 +30,18 @@ Describe 'git/local.ps1' {
         Get-LocalValue $local commit.gpgsign | Should -Be 'true'
     }
 
+    It 'keeps non-ASCII names intact whatever the console encoding' {
+        git config --file $current user.name 'José Müller'
+        $saved = [Console]::OutputEncoding
+        try {
+            [Console]::OutputEncoding = [Text.Encoding]::GetEncoding(437)   # default under pwsh -NoProfile, Task Scheduler
+            & $hook -TokenMap @{ '~' = $home2 } -LocalPath $local 6> $null
+        } finally {
+            [Console]::OutputEncoding = $saved
+        }
+        [IO.File]::ReadAllText($local, [Text.UTF8Encoding]::new($false)) | Should -Match 'name = José Müller'
+    }
+
     It 'never overwrites an existing gitconfig.local' {
         git config --file $current user.name 'From Current'
         git config --file $local user.name 'Mine'

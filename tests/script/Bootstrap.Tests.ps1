@@ -71,9 +71,10 @@ Describe 'script/bootstrap.ps1' {
         Join-Path $TestDrive 'localappdata\Packages' | Should -Not -Exist
     }
 
-    It 'turns ~/.gitconfig into an include of the repo config, seeded into gitconfig.local' {
+    It 'turns ~/.gitconfig into an include of this clone''s config (forward slashes), seeded into gitconfig.local' {
         $gitconfigStub = Join-Path $TestDrive 'home\.gitconfig'
-        Get-Content -Path $gitconfigStub -Raw | Should -Match 'path = ~/.dotfiles/git/gitconfig'
+        $expected = (Join-Path $repo 'git\gitconfig').Replace('\', '/')
+        Get-Content -Path $gitconfigStub -Raw | Should -Match ([regex]::Escape("path = $expected"))
         Join-Path $repo 'git\gitconfig.local' | Should -Exist
     }
 
@@ -82,6 +83,28 @@ Describe 'script/bootstrap.ps1' {
         Add-Content -Path $gitconfigStub -Value "[credential]`n    helper = manager"
         & (Join-Path $repo 'script\bootstrap.ps1') @bootstrapArgs *> $null
         Get-Content -Path $gitconfigStub -Raw | Should -Match 'helper = manager'
+    }
+
+    It 'reports Failed (exit 1) for that ~/.gitconfig when dot runs non-interactively in Prompt mode' {
+        $gitconfigStub = Join-Path $TestDrive 'home\.gitconfig'
+        Get-Content -Path $gitconfigStub -Raw | Should -Match 'helper = manager'   # still edited from the test above
+        $promptArgs = $bootstrapArgs.Clone()
+        $promptArgs.ConflictAction = 'Prompt'
+        & (Join-Path $repo 'script\bootstrap.ps1') @promptArgs *> $null
+        $LASTEXITCODE | Should -Be 1
+        Get-Content -Path $gitconfigStub -Raw | Should -Match 'helper = manager'
+    }
+
+    It '[b]ackup keeps the tool-written lines in the backup and restores the stub' {
+        $gitconfigStub = Join-Path $TestDrive 'home\.gitconfig'
+        $backupArgs = $bootstrapArgs.Clone()
+        $backupArgs.ConflictAction = 'Backup'
+        & (Join-Path $repo 'script\bootstrap.ps1') @backupArgs *> $null
+        $LASTEXITCODE | Should -Be 0
+        $backup = @(Get-ChildItem -Path (Join-Path $TestDrive 'home') -Filter '.gitconfig.backup-*')
+        $backup | Should -HaveCount 1
+        Get-Content -Path $backup[0].FullName -Raw | Should -Match 'helper = manager'
+        Get-Content -Path $gitconfigStub -Raw | Should -Not -Match 'helper = manager'
     }
 }
 

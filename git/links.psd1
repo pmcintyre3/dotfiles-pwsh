@@ -6,10 +6,12 @@
             Source   = 'gitconfig'
             Target   = '~\.gitconfig'
             Method   = 'Include'
+            # {SourcePosix} is this clone's git/gitconfig with forward slashes, so the include always points
+            # at the clone that ran bootstrap (git silently ignores a missing include file).
             Template = @'
-# Managed by dotfiles-pwsh. Shared: ~/.dotfiles/git/gitconfig. This machine: ~/.dotfiles/git/gitconfig.local
+# Managed by dotfiles-pwsh. Shared settings: the file below. This machine: gitconfig.local next to it.
 [include]
-    path = ~/.dotfiles/git/gitconfig
+    path = {SourcePosix}
 '@
         }
     )
