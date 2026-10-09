@@ -1,5 +1,9 @@
 BeforeAll {
     . (Join-Path $PSScriptRoot '..\TestHelpers.ps1')
+    # Bootstrap runs git/local.ps1, which prompts for a missing identity on an interactive console.
+    # Import first: Mock needs the command to exist, and this file may run before any other imports it.
+    Import-Module (Join-Path $PSScriptRoot '..\..\lib\DotfilesTools.psm1') -Force
+    Mock Test-CanPrompt { $false }
 }
 
 Describe 'script/bootstrap.ps1' {
@@ -12,7 +16,7 @@ Describe 'script/bootstrap.ps1' {
             SkipInstall    = $true
             SkipNetwork    = $true
             ConflictAction = 'Skip'
-            TokenMap       = @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'home') }
+            TokenMap       = @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'home'); '{LOCALAPPDATA}' = (Join-Path $TestDrive 'localappdata') }
         }
         & (Join-Path $repo 'script\bootstrap.ps1') @bootstrapArgs *> $null
         $firstExit = $LASTEXITCODE
@@ -58,9 +62,49 @@ Describe 'script/bootstrap.ps1' {
         Set-Content -Path $otherProfile -Value '# newer profile'
         Set-Content -Path (Join-Path $dir 'Microsoft.PowerShell_profile.legacy.ps1') -Value '# hand-made legacy'
         $args2 = $bootstrapArgs.Clone()
-        $args2.TokenMap = @{ '{PROFILE}' = $otherProfile; '~' = (Join-Path $TestDrive 'home') }
+        $args2.TokenMap = @{ '{PROFILE}' = $otherProfile; '~' = (Join-Path $TestDrive 'home'); '{LOCALAPPDATA}' = (Join-Path $TestDrive 'localappdata') }
         & (Join-Path $repo 'script\bootstrap.ps1') @args2 *> $null
         Get-Content -Path (Join-Path $dir 'Microsoft.PowerShell_profile.legacy.ps1') | Should -Be '# hand-made legacy'
+    }
+
+    It 'skips Windows Terminal when it is not installed, without creating its folder' {
+        Join-Path $TestDrive 'localappdata\Packages' | Should -Not -Exist
+    }
+
+    It 'turns ~/.gitconfig into an include of this clone''s config (forward slashes), seeded into gitconfig.local' {
+        $gitconfigStub = Join-Path $TestDrive 'home\.gitconfig'
+        $expected = (Join-Path $repo 'git\gitconfig').Replace('\', '/')
+        Get-Content -Path $gitconfigStub -Raw | Should -Match ([regex]::Escape("path = $expected"))
+        Join-Path $repo 'git\gitconfig.local' | Should -Exist
+    }
+
+    It 'does not silently replace a ~/.gitconfig that tools have written to' {
+        $gitconfigStub = Join-Path $TestDrive 'home\.gitconfig'
+        Add-Content -Path $gitconfigStub -Value "[credential]`n    helper = manager"
+        & (Join-Path $repo 'script\bootstrap.ps1') @bootstrapArgs *> $null
+        Get-Content -Path $gitconfigStub -Raw | Should -Match 'helper = manager'
+    }
+
+    It 'reports Failed (exit 1) for that ~/.gitconfig when dot runs non-interactively in Prompt mode' {
+        $gitconfigStub = Join-Path $TestDrive 'home\.gitconfig'
+        Get-Content -Path $gitconfigStub -Raw | Should -Match 'helper = manager'   # still edited from the test above
+        $promptArgs = $bootstrapArgs.Clone()
+        $promptArgs.ConflictAction = 'Prompt'
+        & (Join-Path $repo 'script\bootstrap.ps1') @promptArgs *> $null
+        $LASTEXITCODE | Should -Be 1
+        Get-Content -Path $gitconfigStub -Raw | Should -Match 'helper = manager'
+    }
+
+    It '[b]ackup keeps the tool-written lines in the backup and restores the stub' {
+        $gitconfigStub = Join-Path $TestDrive 'home\.gitconfig'
+        $backupArgs = $bootstrapArgs.Clone()
+        $backupArgs.ConflictAction = 'Backup'
+        & (Join-Path $repo 'script\bootstrap.ps1') @backupArgs *> $null
+        $LASTEXITCODE | Should -Be 0
+        $backup = @(Get-ChildItem -Path (Join-Path $TestDrive 'home') -Filter '.gitconfig.backup-*')
+        $backup | Should -HaveCount 1
+        Get-Content -Path $backup[0].FullName -Raw | Should -Match 'helper = manager'
+        Get-Content -Path $gitconfigStub -Raw | Should -Not -Match 'helper = manager'
     }
 }
 
@@ -72,9 +116,38 @@ Describe 'bootstrap with excluded topics' {
         Set-Content -Path (Join-Path $repo 'dotfiles.local.psd1') -Value "@{ ExcludeTopics = 'demo' }"
         $profilePath = Join-Path $TestDrive 'excl\Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
         & (Join-Path $repo 'script\bootstrap.ps1') -SkipInstall -SkipNetwork -ConflictAction Skip `
-            -TokenMap @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'excl\home') } *> $null
+            -TokenMap @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'excl\home'); '{LOCALAPPDATA}' = (Join-Path $TestDrive 'localappdata') } *> $null
         Join-Path $repo 'demo\demo.local.ps1' | Should -Not -Exist
         Join-Path $repo 'powershell\profile.local.ps1' | Should -Exist
+    }
+}
+
+Describe 'bootstrap local.ps1 hooks' {
+    BeforeEach {
+        $repo = Copy-DotfilesRepo -Destination (Join-Path $TestDrive ([guid]::NewGuid()))
+        New-Item -ItemType Directory -Path (Join-Path $repo 'demo') | Out-Null
+        Set-Content -Path (Join-Path $repo 'demo\demo.local.ps1.template') -Value '# from template'
+        $profilePath = Join-Path $TestDrive "$([guid]::NewGuid())\Microsoft.PowerShell_profile.ps1"
+        $hookArgs = @{ SkipInstall = $true; SkipNetwork = $true; ConflictAction = 'Skip'
+            TokenMap = @{ '{PROFILE}' = $profilePath; '~' = (Join-Path $TestDrive 'hooks-home'); '{LOCALAPPDATA}' = (Join-Path $TestDrive 'localappdata') } }
+    }
+
+    It 'runs a topic local.ps1 (with the TokenMap) instead of copying its templates' {
+        Set-Content -Path (Join-Path $repo 'demo\local.ps1') -Value @'
+param([hashtable] $TokenMap)
+Set-Content -Path (Join-Path $PSScriptRoot 'hook-ran.txt') -Value $TokenMap['~']
+'@
+        & (Join-Path $repo 'script\bootstrap.ps1') @hookArgs *> $null
+        $LASTEXITCODE | Should -Be 0
+        Get-Content -Path (Join-Path $repo 'demo\hook-ran.txt') | Should -Be (Join-Path $TestDrive 'hooks-home')
+        Join-Path $repo 'demo\demo.local.ps1' | Should -Not -Exist
+    }
+
+    It 'reports a failing hook, still links, and exits 1' {
+        Set-Content -Path (Join-Path $repo 'demo\local.ps1') -Value 'param([hashtable] $TokenMap) throw "hook broke"'
+        & (Join-Path $repo 'script\bootstrap.ps1') @hookArgs *> $null
+        $LASTEXITCODE | Should -Be 1
+        Get-Content -Path $profilePath -Raw | Should -Match 'Managed by dotfiles-pwsh'
     }
 }
 

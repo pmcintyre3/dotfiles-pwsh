@@ -1,0 +1,3 @@
+# Files copied into apps must stay byte-for-byte what the app writes, or the copy drift check
+# (lib/DotfilesTools/link.ps1) sees every core.autocrlf checkout as an edit made outside the repo.
+terminal/windows-terminal.json -text

@@ -1,0 +1,4 @@
+# Global gitignore (core.excludesfile): OS clutter only. Project ignores belong in each repo.
+Thumbs.db
+desktop.ini
+.DS_Store
