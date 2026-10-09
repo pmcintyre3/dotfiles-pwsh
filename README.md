@@ -50,7 +50,10 @@ git -C $HOME\.dotfiles remote set-url origin git@github.com:pmcintyre3/dotfiles-
   The profile loads, in order: `powershell\profile.local.ps1`, then every `env.ps1`, `path.ps1`,
   `functions\*.ps1`, `aliases.ps1`, `completion.ps1`. A file that throws is skipped with a warning.
 - **Machine-local settings** (gitignored, created from `*.template` by bootstrap):
-  - `dotfiles.local.psd1`: `ExcludeTopics`, `Elevation`, `PSRepository`
+  - `dotfiles.local.psd1`: `ExcludeTopics`, `Elevation`, `PSRepository`, `PackageGroups`
+    - `PackageGroups` (`core`, `dev`, `apps`, `personal`) picks which packages this machine gets.
+    - `Elevation`: `Never` (no machine-wide changes), `Prompt` (only via `dot -Elevated`),
+      `Auto` (also inline when dot already runs elevated).
   - `powershell\profile.local.ps1`: `$env:ProjectHome`, `$ProjectPaths` overrides
 - **Copied files and drift.** Files that can't be linked without admin (Windows Terminal settings) are
   copied. Bootstrap remembers what it copied (`.state\`, gitignored): if only the repo changed it
@@ -67,8 +70,11 @@ git -C $HOME\.dotfiles remote set-url origin git@github.com:pmcintyre3/dotfiles-
 `bin\` is on PATH, so:
 
 ```powershell
-dot        # git pull --ff-only, then re-run bootstrap (links + installers). Safe to repeat.
-dot -e     # open ~\.dotfiles in VS Code
+dot             # git pull --ff-only, then re-run bootstrap (links + installers). Safe to repeat.
+dot -Upgrade    # same, and upgrade managed packages
+dot -Elevated   # machine-wide steps skipped for lack of admin (one UAC prompt; see Elevation below)
+dot -ResetExplorerViews   # forget remembered folder views (backed up to .state\) so defaults apply; restarts Explorer
+dot -e          # open ~\.dotfiles in VS Code
 ```
 
 ## Topics
@@ -79,6 +85,9 @@ dot -e     # open ~\.dotfiles in VS Code
 | `git` | `~/.gitconfig` → shared `gitconfig` + per-machine `gitconfig.local`; global gitignore; git helper functions and aliases |
 | `terminal` | Windows Terminal `settings.json` (copied, with drift check; skipped if Terminal isn't installed) |
 | `tools` | PATH entries for OpenSSL, Python, MongoDB, `C:\Tools`; `openssl.cnf` when OpenSSL is installed |
+| `packages` | Curated apps and tools (`packages.psd1`): per-user winget first, Scoop fallback, machine-wide only via `dot -Elevated`; groups chosen per machine |
+| `vscode` | Installs missing extensions from `extensions.txt` (Settings Sync owns settings and keybindings) |
+| `windows` | Explorer and theme defaults, no group-by-date in Downloads (HKCU) every run; long paths and Developer Mode (HKLM) via `dot -Elevated` |
 
 ## Commands
 
