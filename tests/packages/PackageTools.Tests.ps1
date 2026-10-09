@@ -25,6 +25,12 @@ Describe 'Get-InstalledWingetId' {
         $r.Ids | Should -Be @('Git.Git', 'GitHub.cli')
     }
 
+    It 'keeps winget export output off the screen (it lists every unrelated installed app)' {
+        Mock Invoke-Winget { 1 }
+        Get-InstalledWingetId | Out-Null
+        Should -Invoke Invoke-Winget -Times 1 -Exactly -ParameterFilter { $Quiet }
+    }
+
     It 'reports failure when winget export fails' {
         Mock Invoke-Winget { 1 }
         $r = Get-InstalledWingetId

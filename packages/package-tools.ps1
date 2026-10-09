@@ -16,7 +16,7 @@ function Get-InstalledWingetId {
     if (-not (Test-PackageManager -Name 'winget')) { return [pscustomobject]@{ Ok = $true; Ids = @(); Reason = $null } }
     $export = Join-Path ([IO.Path]::GetTempPath()) "dotfiles-winget-$([guid]::NewGuid().ToString('N')).json"
     try {
-        $code = Invoke-Winget -Arguments @('export', '--output', $export, '--accept-source-agreements', '--disable-interactivity')
+        $code = Invoke-Winget -Quiet -Arguments @('export', '--output', $export, '--accept-source-agreements', '--disable-interactivity')
         if ($code -ne 0) { return [pscustomobject]@{ Ok = $false; Ids = @(); Reason = "winget export exited $code" } }
         if (-not (Test-Path -Path $export)) { return [pscustomobject]@{ Ok = $false; Ids = @(); Reason = 'winget export wrote no file' } }
         $json = Get-Content -Path $export -Raw | ConvertFrom-Json
@@ -33,8 +33,11 @@ function Test-ScoopPackageInstalled {
 }
 
 function Invoke-Winget {
-    param([Parameter(Mandatory)] [string[]] $Arguments)
-    winget @Arguments | Out-Host
+    param(
+        [Parameter(Mandatory)] [string[]] $Arguments,
+        [switch] $Quiet
+    )
+    if ($Quiet) { winget @Arguments 2>&1 | Out-Null } else { winget @Arguments | Out-Host }
     return $LASTEXITCODE
 }
 
