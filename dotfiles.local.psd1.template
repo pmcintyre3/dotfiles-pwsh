@@ -1,0 +1,12 @@
+# Install-time settings for this machine. Not committed (see .gitignore).
+# Created from dotfiles.local.psd1.template by script/bootstrap.ps1. See design.md section 7.
+@{
+    # Topics this machine skips entirely: installers, links, and profile loading. Example: @('ai')
+    ExcludeTopics = @()
+
+    # Never | Prompt | Auto. Phase 1 has no elevated steps; this takes effect in Phase 3.
+    Elevation     = 'Never'
+
+    # PowerShell repository for module installs (an internal feed on locked-down machines).
+    PSRepository  = 'PSGallery'
+}

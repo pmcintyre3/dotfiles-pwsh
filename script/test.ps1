@@ -17,7 +17,7 @@ if ($Lint) {
     Import-Module PSScriptAnalyzer -ErrorAction Stop
     $settings = Join-Path $root 'PSScriptAnalyzerSettings.psd1'
     $files = Get-ChildItem -Path $root -Recurse -File -Include '*.ps1', '*.psm1', '*.psd1' |
-        Where-Object { $_.FullName -notmatch '\tests\' }
+        Where-Object { $_.FullName -notmatch '\\tests\\' }
     $issues = $files | ForEach-Object { Invoke-ScriptAnalyzer -Path $_.FullName -Settings $settings }
     if ($issues) {
         $issues | Format-Table RuleName, Severity, ScriptName, Line, Message -AutoSize -Wrap | Out-Host
