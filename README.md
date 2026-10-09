@@ -4,29 +4,68 @@ My Windows / PowerShell 7 dotfiles. They're organized after
 [haacked/dotfiles](https://github.com/haacked/dotfiles), which borrowed the approach from
 [holman/dotfiles](https://github.com/holman/dotfiles): every concern lives in its own topic folder.
 
-## Install
+## Install on a new machine
 
-On a new machine, from Windows PowerShell or PowerShell 7 (no admin needed):
+Use a normal PowerShell window (Windows PowerShell or PowerShell 7). No admin is needed.
+
+### Option A: one-liner
 
 ```powershell
 irm https://raw.githubusercontent.com/pmcintyre3/dotfiles-pwsh/main/install.ps1 | iex
 ```
 
 This installs git and PowerShell 7 for the current user if they're missing, clones this repo to
-`~\.dotfiles`, and runs `script\bootstrap.ps1`.
+`~\.dotfiles`, and runs `script\bootstrap.ps1`. That first run installs the **default package groups
+(`core` and `dev`)** right away. To choose different groups first, use option B.
 
-By hand:
+### Option B: choose settings before anything installs
+
+Use this on a work machine, or anywhere you don't want the defaults:
 
 ```powershell
 git clone https://github.com/pmcintyre3/dotfiles-pwsh.git $HOME\.dotfiles
+Copy-Item $HOME\.dotfiles\dotfiles.local.psd1.template $HOME\.dotfiles\dotfiles.local.psd1
+notepad $HOME\.dotfiles\dotfiles.local.psd1   # set PackageGroups, Elevation, ExcludeTopics
 & $HOME\.dotfiles\script\bootstrap.ps1
 ```
 
-To push over SSH afterwards:
+Typical settings:
 
-```powershell
-git -C $HOME\.dotfiles remote set-url origin git@github.com:pmcintyre3/dotfiles-pwsh.git
-```
+| Machine | `PackageGroups` | `Elevation` | `ExcludeTopics` |
+|---|---|---|---|
+| Home | `core`, `dev`, `apps`, `personal` | `Prompt` | none |
+| Work laptop | `core`, `dev` | `Never` or `Prompt` | `ai` (and anything else personal) |
+
+### What bootstrap asks and does
+
+- **Git identity:** copies name, email, and 1Password commit signing from the machine's existing
+  `~\.gitconfig`. If there's nothing to copy, it asks for your name and email.
+- **Existing files** (`~\.gitconfig`, Windows Terminal settings): asks whether to skip, overwrite,
+  or back up each one. Back up is the safe choice. `$PROFILE` is always backed up before it becomes the stub.
+- **Anything that needs admin** (machine-wide packages, long paths, Developer Mode) is skipped and
+  listed, ready for `dot -Elevated`.
+
+### After the first run
+
+1. Edit `~\.dotfiles\powershell\profile.local.ps1` for this machine's paths, for example
+   `$env:ProjectHome`, `$global:ProjectPaths.Tools`, and `$global:ProjectPaths.AllToolsOnPath`.
+2. Open a new terminal and run `dot`. This also installs VS Code extensions if VS Code was
+   installed during the first run.
+3. Run `dot -Elevated` once (one UAC prompt) for whatever was skipped for admin. Skip this on
+   machines that shouldn't change anything machine-wide.
+4. Optional: run `dot -ResetExplorerViews` so already-opened folders lose the group-by-date view.
+
+### Good to know
+
+- **OneDrive:** `$PROFILE` lives in OneDrive, so on a machine that shares OneDrive with one already
+  set up, `$PROFILE` is already the stub. Until `~\.dotfiles` exists there, the stub loads
+  `Microsoft.PowerShell_profile.legacy.ps1` (the old profile); once you install, it switches over automatically.
+- **Pushing changes from a new machine:** commits are signed with 1Password, and the clone uses
+  HTTPS. Switch it to SSH once:
+
+  ```powershell
+  git -C $HOME\.dotfiles remote set-url origin git@github.com:pmcintyre3/dotfiles-pwsh.git
+  ```
 
 ## How it works
 
