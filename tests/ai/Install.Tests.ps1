@@ -27,6 +27,15 @@ Describe 'ai/install.ps1' {
         Get-ChildItem -Path (Join-Path $root '.state') -Filter 'settings.json.backup-*' | Should -HaveCount 1
     }
 
+    It 'names the managed keys it put back (e.g. a plugin disabled in the UI)' {
+        New-Item -ItemType Directory -Path $claudeDir -Force | Out-Null
+        $live = Get-Content -Path $repoSettings -Raw | ConvertFrom-Json -AsHashtable
+        $live.enabledPlugins['superpowers@claude-plugins-official'] = $false
+        $live | ConvertTo-Json -Depth 10 | Set-Content -Path $settings
+        $output = & $installer -Root $root -SettingsPath $settings 6>&1 | Out-String
+        $output | Should -Match ([regex]::Escape('enabledPlugins.superpowers@claude-plugins-official'))
+    }
+
     It 'throws, leaving the file alone, when it is not valid JSON' {
         New-Item -ItemType Directory -Path $claudeDir -Force | Out-Null
         Set-Content -Path $settings -Value '{ broken'

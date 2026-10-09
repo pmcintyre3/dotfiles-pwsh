@@ -44,6 +44,26 @@ Describe 'Merge-JsonSettings' {
         $backups | Should -Not -Exist
     }
 
+    It 'leaves a <Label> file alone and reports it (half-written or not a JSON object)' -ForEach @(
+        @{ Label = 'empty'; Content = '' }
+        @{ Label = 'whitespace-only'; Content = "   `n" }
+        @{ Label = 'null'; Content = 'null' }
+        @{ Label = 'array'; Content = '[1, 2]' }
+    ) {
+        [IO.File]::WriteAllText($live, $Content)
+        $r = Merge-JsonSettings -Path $live -ManagedPath $managed
+        $r.Action | Should -Be 'Failed'
+        $r.Reason | Should -Match 'left alone'
+        [IO.File]::ReadAllText($live) | Should -Be $Content
+    }
+
+    It 'reports which managed keys it changed' {
+        Set-Content -Path $live -Value '{ "theme": "dark", "enabledPlugins": { "a@m": false, "b@m": true }, "model": "opus" }'
+        $r = Merge-JsonSettings -Path $live -ManagedPath $managed
+        $r.Action | Should -Be 'Updated'
+        $r.Changed | Should -Be @('enabledPlugins.a@m')
+    }
+
     It 'leaves a file that is not valid JSON alone and reports it' {
         Set-Content -Path $live -Value '{ "theme": "dark", '
         $r = Merge-JsonSettings -Path $live -ManagedPath $managed

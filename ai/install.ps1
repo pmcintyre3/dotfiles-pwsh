@@ -23,7 +23,10 @@ if (-not (Test-Path -Path $claudeDir)) {
 $result = Merge-JsonSettings -Path $SettingsPath -ManagedPath $ManagedPath -BackupDir (Join-Path $Root '.state')
 switch ($result.Action) {
     'Created'   { Write-Status -Level Success -Message "Created $SettingsPath from ai\claude\settings.json" }
-    'Updated'   { Write-Status -Level Success -Message "Updated managed Claude Code settings (previous copy: $($result.BackupPath))" }
+    'Updated'   {
+        Write-Status -Level Success -Message "Put back managed Claude Code settings: $($result.Changed -join ', ') (previous copy: $($result.BackupPath))"
+        Write-Status -Level User -Message 'Managed keys always win. To keep a different value (e.g. a plugin turned off), change it in ai\claude\settings.json.'
+    }
     'Unchanged' { Write-Status -Level Skip -Message 'Claude Code settings already as configured' }
     'Failed'    { throw $result.Reason }
 }
