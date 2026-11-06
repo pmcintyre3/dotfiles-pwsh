@@ -21,7 +21,7 @@ codezombiech.gitignore
 connor4312.esbuild-problem-matchers
 coyote-studios.monkey-wrench
 cweijan.vscode-office
-darkempire78.discord-tools
+# darkempire78.discord-tools
 davidanson.vscode-markdownlint
 dbaeumer.vscode-eslint
 dbankier.vscode-quick-select
@@ -59,7 +59,7 @@ ms-azuretools.vscode-docker
 ms-ceintl.vscode-language-pack-ja
 ms-dotnettools.csdevkit
 ms-dotnettools.csharp
-ms-dotnettools.dotnet-interactive-vscode
+# ms-dotnettools.dotnet-interactive-vscode
 ms-dotnettools.dotnet-maui
 ms-dotnettools.vscode-dotnet-pack
 ms-dotnettools.vscode-dotnet-runtime
@@ -73,11 +73,11 @@ ms-python.isort
 ms-python.python
 ms-python.vscode-pylance
 ms-python.vscode-python-envs
-ms-toolsai.jupyter
-ms-toolsai.jupyter-keymap
-ms-toolsai.jupyter-renderers
-ms-toolsai.vscode-jupyter-cell-tags
-ms-toolsai.vscode-jupyter-slideshow
+# ms-toolsai.jupyter
+# ms-toolsai.jupyter-keymap
+# ms-toolsai.jupyter-renderers
+# ms-toolsai.vscode-jupyter-cell-tags
+# ms-toolsai.vscode-jupyter-slideshow
 ms-vscode-remote.remote-containers
 ms-vscode-remote.remote-wsl
 ms-vscode.extension-test-runner
