@@ -7,6 +7,9 @@ git/gitconfig.local
 # Backups written by New-DotLink when replacing an existing file
 *.backup-*
 
+# Per-machine editor preferences (e.g. Peacock colours)
+.vscode/
+
 # Test output
 testResults.xml
 
