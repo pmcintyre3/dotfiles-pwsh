@@ -1,0 +1,74 @@
+// Place your key bindings in this file to override the defaults
+[
+    {
+        "key": "ctrl+k ctrl+k",
+        "command": "bookmarks.toggle",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+alt+k",
+        "command": "-bookmarks.toggle",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+alt+s",
+        "command": "workbench.action.files.saveAs"
+    },
+    {
+        "key": "ctrl+shift+s",
+        "command": "-workbench.action.files.saveAs"
+    },
+    {
+        "key": "ctrl+shift+alt+s",
+        "command": "workbench.action.files.saveLocalFile",
+        "when": "remoteFileDialogVisible"
+    },
+    {
+        "key": "ctrl+shift+s",
+        "command": "-workbench.action.files.saveLocalFile",
+        "when": "remoteFileDialogVisible"
+    },
+    {
+        "key": "ctrl+shift+s",
+        "command": "saveAll"
+    },
+    {
+        "key": "ctrl+k s",
+        "command": "-saveAll"
+    },
+    {
+        "key": "ctrl+shift+s",
+        "command": "workbench.action.files.saveFiles"
+    },
+    {
+        "key": "ctrl+shift+s",
+        "command": "workbench.action.files.saveAll"
+    },
+
+    // Format Markdown tables
+    {
+        "key": "ctrl+shift+alt+[",
+        "command": "markdowntable.format"
+    },
+
+    // Insert Unicode symbols
+    {
+        "key": "ctrl+shift+alt+-",
+        "command": "type",
+        "args": { "text": "—" }
+    },
+    {
+        "key": "ctrl+shift+alt+8",
+        "command": "type",
+        "args": { "text": "×" }
+    },
+
+    {
+        "key": "shift+enter",
+        "command": "workbench.action.terminal.sendSequence",
+        "args": {
+            "text": "\u001b\r"
+        },
+        "when": "terminalFocus"
+    }
+]

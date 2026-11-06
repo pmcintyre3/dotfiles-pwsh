@@ -128,7 +128,7 @@ dot -e          # open ~\.dotfiles in VS Code
 | `terminal` | Windows Terminal `settings.json` (copied, with drift check; skipped if Terminal isn't installed) |
 | `tools` | PATH entries for OpenSSL, Python, MongoDB, `C:\Tools`; `openssl.cnf` when OpenSSL is installed |
 | `packages` | Curated apps and tools (`packages.psd1`): per-user winget first, Scoop fallback, machine-wide only via `dot -Elevated`; groups chosen per machine, plus per-machine additions/exclusions in `packages.local.psd1` |
-| `vscode` | Installs missing extensions from `extensions.txt` (Settings Sync owns settings and keybindings) |
+| `vscode` | Installs missing extensions from `extensions.txt`; `keybindings.json` (copied, with drift check; skipped if VS Code isn't installed). Settings Sync owns settings |
 | `windows` | Explorer and theme defaults, no group-by-date in Downloads (HKCU) every run; long paths and Developer Mode (HKLM) via `dot -Elevated` |
 | `ai` | Claude Code: merges managed keys from `ai/claude/settings.json` (plugins, theme, notifications) into `~/.claude/settings.json`. Managed keys always win (a plugin turned off in Claude Code is turned back on; set it to `false` in the repo instead); every other key Claude Code writes is kept. Links `ai/claude/CLAUDE.md` once it exists. Never touches credentials, `~/.claude.json`, plugins, memory, or synced skills. Exclude it on work machines with `ExcludeTopics = @('ai')` |
 
