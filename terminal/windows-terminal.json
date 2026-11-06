@@ -51,15 +51,30 @@
             "keys": "alt+shift+d"
         }
     ],
-    "newTabMenu": 
+    "newTabMenu":
     [
+        {
+            "icon": null,
+            "profile": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+            "type": "profile"
+        },
+        {
+            "type": "separator"
+        },
         {
             "type": "remainingProfiles"
         }
     ],
     "profiles": 
     {
-        "defaults": {},
+        "defaults":
+        {
+            "font":
+            {
+                "face": "Fira Code Retina",
+                "size": 10
+            }
+        },
         "list": 
         [
             {

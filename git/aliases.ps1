@@ -4,7 +4,8 @@ Set-Alias -Name gti     -Value Invoke-MispelledGitCommand
 Set-Alias -Name glsb    -Value Get-LocalGitBranches
 Set-Alias -Name gfix    -Value Invoke-GitUnsetUpstream
 Set-Alias -Name gmg     -Value Merge-UpdatedGitBranch
-Set-Alias -Name gmerge  -Value Merge-UpdatedGitBranchFromOrigin
 Set-Alias -Name grb     -Value Invoke-GitRebase
 Set-Alias -Name grebase -Value Invoke-GitRebaseFromOrigin
 Set-Alias -Name grepo   -Value Get-GitRepositoryName
+Set-Alias -Name gfco    -Value Set-GitBranchToLastestDetachedHead
+Set-Alias -Name gfmo  	-Value Merge-GitBranchWithLatestFromOrigin

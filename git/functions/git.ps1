@@ -42,6 +42,32 @@ function Merge-UpdatedGitBranchFromOrigin()
 #     git clean -xdf -e .vs -e **/node_modules -e **/packages <# -e QGenda.Web/dist #>
 # }
 
+function Set-GitBranchToLastestDetachedHead()
+{
+    Get-ReferencesForAllGitBranches
+    $defaultBranch = Get-GitDefaultBranchName
+
+    if (!$defaultBranch) {
+        Write-Error "Could not determine the default branch"
+        return
+    }
+
+    git checkout origin/$defaultBranch
+}
+
+function Merge-GitBranchWithLatestFromOrigin()
+{
+	Get-ReferencesForAllGitBranches
+	$defaultBranch = Get-GitDefaultBranchName
+
+	if (!$defaultBranch) {
+			Write-Error "Could not determine the default branch"
+			return
+	}
+
+	git merge origin/$defaultBranch
+}
+
 
 function Get-ReferencesForAllGitBranches()
 {
@@ -65,7 +91,7 @@ function Get-GitRepositoryName
             Write-Error "This location is not part of a git repository"
             return
         }
-        
+
         return ((git config --get remote.origin.url) -replace ("(https://)([\w\.]+)(/[\w0-9\%]+)(/_git/)", "$1")).Trim()   
     }
     else {
@@ -73,7 +99,7 @@ function Get-GitRepositoryName
             Write-Error "The location '$Path' is not part of a git repository"
             return
         }
-        
+
         return ((git -C $Path config --get remote.origin.url) -replace ("(https://)([\w\.]+)(/[\w0-9\%]+)(/_git/)", "$1")).Trim()  
     }
 }

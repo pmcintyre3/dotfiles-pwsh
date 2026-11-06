@@ -10,9 +10,10 @@ BeforeDiscovery {
         # git/functions/git.ps1 + git/aliases.ps1
         'Invoke-MispelledGitCommand', 'Get-LocalGitBranches', 'Invoke-GitUnsetUpstream', 'Invoke-GitRebase'
         'Invoke-GitRebaseFromOrigin', 'Merge-UpdatedGitBranch', 'Merge-UpdatedGitBranchFromOrigin'
+        'Set-GitBranchToLastestDetachedHead', 'Merge-GitBranchWithLatestFromOrigin'
         'Get-ReferencesForAllGitBranches', 'Get-LatestFromGitBranch', 'Get-GitRepositoryName'
         'Get-CurrentlyInGitRepository', 'Get-GitDefaultBranchName', 'Get-GitCurrentBranchName', 'Remove-LocalMergedBranches'
-        'gti', 'glsb', 'gfix', 'gmg', 'gmerge', 'grb', 'grebase', 'grepo'
+        'gti', 'glsb', 'gfix', 'gmg', 'grb', 'grebase', 'grepo', 'gfco', 'gfmo'
     )
 }
 
