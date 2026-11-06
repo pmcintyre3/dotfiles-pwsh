@@ -91,6 +91,9 @@ Typical settings:
 - **Machine-local settings** (gitignored, created from `*.template` by bootstrap):
   - `dotfiles.local.psd1`: `ExcludeTopics`, `Elevation`, `PSRepository`, `PackageGroups`
     - `PackageGroups` (`core`, `dev`, `apps`, `personal`) picks which packages this machine gets.
+  - `packages\packages.local.psd1`: this machine's package tweaks on top of `packages.psd1`
+    - `Packages` adds entries (same shape; without a `Group` they always install; same `Name` replaces a shared entry).
+    - `Exclude` drops packages by `Name` or winget ID, even when their group is enabled.
     - `Elevation`: `Never` (no machine-wide changes), `Prompt` (only via `dot -Elevated`),
       `Auto` (also inline when dot already runs elevated).
   - `powershell\profile.local.ps1`: `$env:ProjectHome`, `$ProjectPaths` overrides
@@ -124,7 +127,7 @@ dot -e          # open ~\.dotfiles in VS Code
 | `git` | `~/.gitconfig` → shared `gitconfig` + per-machine `gitconfig.local`; global gitignore; git helper functions and aliases |
 | `terminal` | Windows Terminal `settings.json` (copied, with drift check; skipped if Terminal isn't installed) |
 | `tools` | PATH entries for OpenSSL, Python, MongoDB, `C:\Tools`; `openssl.cnf` when OpenSSL is installed |
-| `packages` | Curated apps and tools (`packages.psd1`): per-user winget first, Scoop fallback, machine-wide only via `dot -Elevated`; groups chosen per machine |
+| `packages` | Curated apps and tools (`packages.psd1`): per-user winget first, Scoop fallback, machine-wide only via `dot -Elevated`; groups chosen per machine, plus per-machine additions/exclusions in `packages.local.psd1` |
 | `vscode` | Installs missing extensions from `extensions.txt` (Settings Sync owns settings and keybindings) |
 | `windows` | Explorer and theme defaults, no group-by-date in Downloads (HKCU) every run; long paths and Developer Mode (HKLM) via `dot -Elevated` |
 | `ai` | Claude Code: merges managed keys from `ai/claude/settings.json` (plugins, theme, notifications) into `~/.claude/settings.json`. Managed keys always win (a plugin turned off in Claude Code is turned back on; set it to `false` in the repo instead); every other key Claude Code writes is kept. Links `ai/claude/CLAUDE.md` once it exists. Never touches credentials, `~/.claude.json`, plugins, memory, or synced skills. Exclude it on work machines with `ExcludeTopics = @('ai')` |

@@ -96,6 +96,24 @@ Describe 'packages/install.ps1' {
         @(Get-Content -Path $needsAdminFile -Raw | ConvertFrom-Json) | Should -BeNullOrEmpty
     }
 
+    It 'applies packages.local.psd1: local additions always install, exclusions never do' {
+        Set-Content -Path (Join-Path $root 'packages.local.psd1') -Value @'
+@{
+    Packages = @(@{ Name = 'Extra'; Winget = 'Vendor.Extra' })
+    Exclude  = @('Broken')
+}
+'@
+        { & $installer -Root $root -ManifestPath $manifest 6> $null } | Should -Not -Throw
+        Should -Invoke Install-ManagedPackage -Times 1 -Exactly -ParameterFilter { $Package.Name -eq 'Extra' }
+        Should -Invoke Install-ManagedPackage -Times 0 -Exactly -ParameterFilter { $Package.Name -eq 'Broken' }
+    }
+
+    It 'throws a clear error for an invalid packages.local.psd1' {
+        Set-Content -Path (Join-Path $root 'packages.local.psd1') -Value '@{ Packages = '
+        { & $installer -Root $root -ManifestPath $manifest 6> $null } | Should -Throw '*packages.local.psd1*'
+        Should -Invoke Install-ManagedPackage -Times 0 -Exactly
+    }
+
     It '-MachineOnly -Upgrade upgrades machine-scope packages only' {
         Mock Test-IsAdmin { $true }
         { & $installer -Root $root -ManifestPath $manifest -MachineOnly -Upgrade 6> $null } | Should -Not -Throw

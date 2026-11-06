@@ -10,6 +10,8 @@
 param(
     [string] $Root = (Split-Path -Path $PSScriptRoot -Parent),
     [string] $ManifestPath = (Join-Path $PSScriptRoot 'packages.psd1'),
+    # Defaults to packages.local.psd1 next to the manifest.
+    [string] $LocalManifestPath,
     [string] $StateDir = (Join-Path $Root '.state'),
     [switch] $Upgrade,
     [switch] $MachineOnly
@@ -20,6 +22,18 @@ Import-Module (Join-Path $PSScriptRoot '..\lib\DotfilesTools.psm1')
 
 $config = Read-DotfilesConfig -Root $Root
 $manifest = Import-PowerShellDataFile -Path $ManifestPath
+# This machine's additions and exclusions (gitignored). 'local' is always enabled for its group-less entries.
+if (-not $LocalManifestPath) { $LocalManifestPath = [IO.Path]::ChangeExtension($ManifestPath, '.local.psd1') }
+$local = @{}
+if (Test-Path -Path $LocalManifestPath) {
+    try {
+        $local = Import-PowerShellDataFile -Path $LocalManifestPath -ErrorAction Stop
+    } catch {
+        throw "Invalid local package list '$LocalManifestPath': $($_.Exception.Message)"
+    }
+}
+$manifest.Packages = @(Merge-PackageManifest -Packages $manifest.Packages -Local $local)
+$config.PackageGroups = @($config.PackageGroups) + 'local' | Select-Object -Unique
 # elevated.ps1 has already checked Elevation before running -MachineOnly.
 $machineAllowed = (Test-IsAdmin) -and ($MachineOnly -or $config.Elevation -eq 'Auto')
 $needsAdminPath = Join-Path $StateDir 'needs-admin-packages.json'

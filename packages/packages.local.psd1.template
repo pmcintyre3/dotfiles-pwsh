@@ -1,0 +1,13 @@
+# This machine's package additions and exclusions. Not committed (see .gitignore).
+# Created from packages.local.psd1.template by script/bootstrap.ps1. Applied on top of packages.psd1.
+@{
+    # Extra packages for this machine, in the same shape as packages.psd1. Group is optional: entries
+    # without one are always installed. An entry with the same Name as a shared one replaces it.
+    # Example: @{ Name = 'OBS Studio'; Winget = 'OBSProject.OBSStudio' }
+    Packages = @(
+    )
+
+    # Packages this machine never installs, by Name or Winget ID, even if their group is enabled.
+    # Example: @('Steam', 'Zoom.Zoom.EXE')
+    Exclude  = @()
+}
