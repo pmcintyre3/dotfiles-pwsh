@@ -51,6 +51,43 @@ Describe 'Get-InstalledWingetId' {
     }
 }
 
+Describe 'Merge-PackageManifest' {
+    BeforeAll {
+        $shared = @(
+            @{ Name = 'Git'; Group = 'core'; Winget = 'Git.Git' }
+            @{ Name = 'Steam'; Group = 'personal'; Winget = 'Valve.Steam' }
+            @{ Name = 'Zoom'; Group = 'apps'; Winget = 'Zoom.Zoom.EXE' }
+        )
+    }
+
+    It 'returns the shared packages unchanged without local settings' {
+        (Merge-PackageManifest -Packages $shared).Name | Should -Be @('Git', 'Steam', 'Zoom')
+    }
+
+    It "adds local packages, defaulting their group to 'local' and keeping one that is set" {
+        $local = @{ Packages = @(
+                @{ Name = 'OBS'; Winget = 'OBSProject.OBSStudio' }
+                @{ Name = 'Game'; Group = 'personal'; Winget = 'Vendor.Game' }
+            ) }
+        $merged = @(Merge-PackageManifest -Packages $shared -Local $local)
+        $merged.Name | Should -Be @('Git', 'Steam', 'Zoom', 'OBS', 'Game')
+        $merged[3].Group | Should -Be 'local'
+        $merged[4].Group | Should -Be 'personal'
+        $local.Packages[0].ContainsKey('Group') | Should -BeFalse -Because 'the local settings are not modified'
+    }
+
+    It 'replaces a shared package with a local one of the same name' {
+        $merged = @(Merge-PackageManifest -Packages $shared -Local @{ Packages = @(@{ Name = 'Git'; Scoop = 'git' }) })
+        @($merged | Where-Object Name -EQ 'Git').Count | Should -Be 1
+        ($merged | Where-Object Name -EQ 'Git').Scoop | Should -Be 'git'
+    }
+
+    It 'excludes packages by name or winget ID, including local ones' {
+        $local = @{ Packages = @(@{ Name = 'OBS'; Winget = 'OBSProject.OBSStudio' }); Exclude = @('Steam', 'zoom.zoom.exe', 'OBS') }
+        (Merge-PackageManifest -Packages $shared -Local $local).Name | Should -Be @('Git')
+    }
+}
+
 Describe 'Get-PackagePlan' {
     It 'keeps only enabled groups, in manifest order' {
         Mock Test-ScoopPackageInstalled { $false }

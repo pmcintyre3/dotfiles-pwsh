@@ -15,14 +15,14 @@
 
         # dev: development machines
         @{ Name = 'VS Code';            Group = 'dev'; Winget = 'Microsoft.VisualStudioCode' }
-        # @{ Name = 'Visual Studio';     Group = 'dev'; Winget = 'Microsoft.VisualStudio.Community' }
+        @{ Name = 'Visual Studio';      Group = 'dev'; Winget = 'Microsoft.VisualStudio.Community' }
         @{ Name = 'Docker Desktop';     Group = 'dev'; Winget = 'Docker.DockerDesktop' }
         @{ Name = 'WSL';                Group = 'dev'; Winget = 'Microsoft.WSL' }
         @{ Name = '.NET 8 SDK';         Group = 'dev'; Winget = 'Microsoft.DotNet.SDK.8' }
         @{ Name = '.NET 9 SDK';         Group = 'dev'; Winget = 'Microsoft.DotNet.SDK.9' }
         @{ Name = 'Temurin JDK 25';     Group = 'dev'; Winget = 'EclipseAdoptium.Temurin.25.JDK' }
-        # @{ Name = 'NVM for Windows';    Group = 'dev'; Winget = 'CoreyButler.NVMforWindows';  Scoop = 'nvm' }
-        # @{ Name = 'AWS CLI';            Group = 'dev'; Winget = 'Amazon.AWSCLI';              Scoop = 'aws' }
+        @{ Name = 'NVM for Windows';    Group = 'dev'; Winget = 'CoreyButler.NVMforWindows';  Scoop = 'nvm' }
+        @{ Name = 'AWS CLI';            Group = 'dev'; Winget = 'Amazon.AWSCLI';              Scoop = 'aws' }
         @{ Name = 'doctl';              Group = 'dev'; Winget = 'DigitalOcean.Doctl';         Scoop = 'doctl' }
         @{ Name = 'LINQPad 8';          Group = 'dev'; Winget = 'LINQPad.LINQPad.8' }
         @{ Name = 'LINQPad 9';          Group = 'dev'; Winget = 'LINQPad.LINQPad.9' }
@@ -41,6 +41,7 @@
         @{ Name = 'Bitwarden';          Group = 'apps'; Winget = 'Bitwarden.Bitwarden' }
         @{ Name = 'Spotify';            Group = 'apps'; Winget = 'Spotify.Spotify' }
         @{ Name = 'Surfshark';          Group = 'apps'; Winget = 'Surfshark.Surfshark' }
+        @{ Name = 'Mullvad VPN';        Group = 'apps'; Winget = 'MullvadVPN.MullvadVPN' }
 
         # personal: home machines only
         @{ Name = 'Steam';              Group = 'personal'; Winget = 'Valve.Steam' }

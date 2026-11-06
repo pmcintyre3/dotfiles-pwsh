@@ -24,5 +24,6 @@ Describe '.gitattributes' {
         # Windows Terminal writes LF; core.autocrlf=true would check the repo copy out as CRLF and
         # make every run look like an edit made outside the repo.
         (git -C $root check-attr text -- terminal/windows-terminal.json) | Should -Match 'text: unset$'
+        (git -C $root check-attr text -- vscode/keybindings.json) | Should -Match 'text: unset$'
     }
 }

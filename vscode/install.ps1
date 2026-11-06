@@ -2,7 +2,7 @@
 <#
 .SYNOPSIS
     vscode topic installer: install extensions listed in extensions.txt that aren't installed yet.
-    Never uninstalls. VS Code Settings Sync owns settings and keybindings; this covers machines without it.
+    Never uninstalls. keybindings.json is copied by links.psd1; Settings Sync still owns settings.
 #>
 [CmdletBinding()]
 param(

@@ -65,6 +65,28 @@ function Invoke-Choco {
     return $LASTEXITCODE
 }
 
+function Merge-PackageManifest {
+    <#
+    .SYNOPSIS
+        Apply this machine's packages.local.psd1 to the shared package list. Its Packages are added (or replace
+        a shared entry with the same Name); entries without a Group get 'local', which is always enabled.
+        Its Exclude list drops packages by Name or Winget ID, shared or local.
+    #>
+    param(
+        [Parameter(Mandatory)] [hashtable[]] $Packages,
+        [hashtable] $Local = @{}
+    )
+    $added = @(foreach ($package in @($Local.Packages | Where-Object { $_ })) {
+            $entry = $package.Clone()
+            if (-not $entry.Group) { $entry.Group = 'local' }
+            $entry
+        })
+    $addedNames = @($added | ForEach-Object { $_.Name })
+    $exclude = @($Local.Exclude | Where-Object { $_ })
+    @(@($Packages | Where-Object { $_.Name -notin $addedNames }) + $added) |
+        Where-Object { $_.Name -notin $exclude -and -not ($_.Winget -and $_.Winget -in $exclude) }
+}
+
 function Get-PackagePlan {
     param(
         [Parameter(Mandatory)] [hashtable[]] $Packages,
