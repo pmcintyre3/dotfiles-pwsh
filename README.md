@@ -144,9 +144,11 @@ dot -e          # open ~\.dotfiles in VS Code
 | `gti` | `Invoke-MispelledGitCommand` | git |
 | `glsb` | `Get-LocalGitBranches` | git |
 | `gfix` | `Invoke-GitUnsetUpstream` | git |
-| `gmg` / `gmerge` | `Merge-UpdatedGitBranch` / `Merge-UpdatedGitBranchFromOrigin` | git |
+| `gmg` | `Merge-UpdatedGitBranch` | git |
 | `grb` / `grebase` | `Invoke-GitRebase` / `Invoke-GitRebaseFromOrigin` | git |
 | `grepo` | `Get-GitRepositoryName` | git |
+| `gfco` | `Set-GitBranchToLastestDetachedHead` | git |
+| `gfmo` | `Merge-GitBranchWithLatestFromOrigin` | git |
 
 ### Git config tips
 
