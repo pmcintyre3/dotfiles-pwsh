@@ -24,6 +24,7 @@
         @{ Name = 'NVM for Windows';    Group = 'dev'; Winget = 'CoreyButler.NVMforWindows';  Scoop = 'nvm' }
         @{ Name = 'AWS CLI';            Group = 'dev'; Winget = 'Amazon.AWSCLI';              Scoop = 'aws' }
         @{ Name = 'doctl';              Group = 'dev'; Winget = 'DigitalOcean.Doctl';         Scoop = 'doctl' }
+        @{ Name = 'Android Platform-Tools'; Group = 'dev'; Winget = 'Google.PlatformTools';   Scoop = 'adb' } # adb + fastboot on PATH, with or without Android Studio
         @{ Name = 'LINQPad 8';          Group = 'dev'; Winget = 'LINQPad.LINQPad.8' }
         @{ Name = 'LINQPad 9';          Group = 'dev'; Winget = 'LINQPad.LINQPad.9' }
         @{ Name = 'RipGrep MSVC';       Group = 'dev'; Winget = 'BurntSushi.ripgrep.MSVC';    Scoop = 'rga' } # For ToDo-Tree integration in VS Code
