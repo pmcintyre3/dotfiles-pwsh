@@ -7,7 +7,7 @@
         @{ Name = 'Git';                Group = 'core'; Winget = 'Git.Git';                    Scoop = 'git' }
         @{ Name = 'GitHub CLI';         Group = 'core'; Winget = 'GitHub.cli';                 Scoop = 'gh' }
         @{ Name = 'PowerShell 7';       Group = 'core'; Winget = 'Microsoft.PowerShell';       Scoop = 'pwsh' }
-        @{ Name = 'Windows Terminal';   Group = 'core'; Winget = 'Microsoft.WindowsTerminal' }
+        @{ Name = 'Windows Terminal Preview'; Group = 'core'; Winget = 'Microsoft.WindowsTerminal.Preview' }
         @{ Name = '1Password';          Group = 'core'; Winget = 'AgileBits.1Password' }
         @{ Name = '1Password CLI';      Group = 'core'; Winget = 'AgileBits.1Password.CLI';    Scoop = '1password-cli' }
         @{ Name = '7-Zip';              Group = 'core'; Winget = '7zip.7zip';                  Scoop = '7zip' }

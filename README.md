@@ -125,7 +125,7 @@ dot -e          # open ~\.dotfiles in VS Code
 |-------|--------------|
 | `powershell` | Profile loader, navigation and menu helpers, gallery modules (`modules.psd1`) |
 | `git` | `~/.gitconfig` → shared `gitconfig` + per-machine `gitconfig.local`; global gitignore; git helper functions and aliases |
-| `terminal` | Windows Terminal `settings.json` (copied, with drift check; skipped if Terminal isn't installed) |
+| `terminal` | Windows Terminal Preview `settings.json` (copied, with drift check; skipped if Terminal Preview isn't installed) |
 | `tools` | PATH entries for OpenSSL, Python, MongoDB, `C:\Tools`; `openssl.cnf` when OpenSSL is installed |
 | `packages` | Curated apps and tools (`packages.psd1`): per-user winget first, Scoop fallback, machine-wide only via `dot -Elevated`; groups chosen per machine, plus per-machine additions/exclusions in `packages.local.psd1` |
 | `vscode` | Installs missing extensions from `extensions.txt`; `keybindings.json` (copied, with drift check; skipped if VS Code isn't installed). Settings Sync owns settings |
