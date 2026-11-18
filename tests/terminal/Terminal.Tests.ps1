@@ -11,10 +11,10 @@ Describe 'terminal topic' {
         $settings.profiles.list.guid | Should -Contain $settings.defaultProfile
     }
 
-    It 'copies to the Windows Terminal LocalState folder, only when Terminal is installed' {
+    It 'copies to the Windows Terminal Preview LocalState folder, only when Terminal is installed' {
         $entry = (Import-PowerShellDataFile -Path (Join-Path $topic 'links.psd1')).Links | Select-Object -First 1
         $entry.Source | Should -Be 'windows-terminal.json'
-        $entry.Target | Should -Be '{LOCALAPPDATA}\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json'
+        $entry.Target | Should -Be '{LOCALAPPDATA}\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json'
         $entry.Method | Should -Be 'Copy'
         $entry.RequireParent | Should -BeTrue
         $entry.OnConflict | Should -BeNullOrEmpty
